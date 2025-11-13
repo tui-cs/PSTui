@@ -26,8 +26,13 @@ namespace OutGridView.Cmdlet
             return filteredList;
         }
 
-        public static string GetPaddedString(List<string> strings, int offset, int[] listViewColumnWidths)
+        public static string GetPaddedString(List<string> strings, int offset, int[]? listViewColumnWidths)
         {
+            if (listViewColumnWidths is null)
+            {
+                return string.Empty;
+            }
+
             var builder = new StringBuilder();
             if (offset > 0)
             {

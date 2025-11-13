@@ -17,7 +17,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Terminal.Gui" />
+        <!-- Using local Terminal.Gui build for debugging -->
+        <ProjectReference Include="..\..\..\gui-cs\Terminal.Gui\Terminal.Gui\Terminal.Gui.csproj" />
         <PackageReference Include="Microsoft.PowerShell.SDK" />
     </ItemGroup>
 
@@ -33,5 +34,9 @@
         <EnableNETAnalyzers>true</EnableNETAnalyzers>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
         <AnalysisMode>Recommended</AnalysisMode>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup>
 </Project>
