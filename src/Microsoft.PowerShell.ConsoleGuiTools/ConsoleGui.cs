@@ -18,7 +18,7 @@ namespace OutGridView.Cmdlet;
 
 internal sealed class ConsoleGui : IDisposable
 {
-    private const string FILTER_LABEL = "Filter";
+    private const string FILTER_LABEL = "_Filter";
 
     // This adjusts the left margin of all controls
     private const int MARGIN_LEFT = 1;
@@ -48,10 +48,9 @@ internal sealed class ConsoleGui : IDisposable
     public HashSet<int> Start(ApplicationData applicationData)
     {
         _applicationData = applicationData;
-        // In Terminal.Gui v2, Application.Init() no longer accepts a driver parameter.
-        // Instead, use Application.ForceDriver to specify the driver.
         if (_applicationData.UseNetDriver) Application.ForceDriver = "NetDriver";
         Application.Init();
+
         _gridViewDetails = new GridViewDetails
         {
             // If OutputMode is Single or Multiple, then we make items selectable. If we make them selectable,
@@ -67,7 +66,7 @@ internal sealed class ConsoleGui : IDisposable
         var gridHeaders = _applicationData.DataTable.DataColumns.Select(c => c.Label).ToList();
 
         // Copy the input DataTable into our master ListView source list; upon exit any items
-        // that are IsMarked are returned (if Outputmode is set)
+        // that are IsMarked are returned (if OutputMode is set)
         _inputSource = LoadData();
 
         if (!_applicationData.MinUI)
@@ -85,8 +84,8 @@ internal sealed class ConsoleGui : IDisposable
         AddStatusBar(win, !_applicationData.MinUI);
 
         // We *always* apply a filter, even if the -Filter parameter is not set or Filtering is not
-        // available. The ListView always shows a fitlered version of _inputSource even if there is no
-        // actual fitler. 
+        // available. The ListView always shows a filtered version of _inputSource even if there is no
+        // actual filter. 
         //ApplyFilter();
 
         _listView?.SetFocus();
@@ -383,7 +382,6 @@ internal sealed class ConsoleGui : IDisposable
             try
             {
                 _filterErrorView.Text = string.Empty;
-                _filterErrorView.SetNeedsDraw();
                 _applicationData!.Filter = filterText!;
                 ApplyFilter();
             }
