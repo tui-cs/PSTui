@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Internal;
+using System.Management.Automation.Runspaces;
 using Microsoft.PowerShell.Commands;
 using Microsoft.PowerShell.OutGridView.Models;
 
@@ -15,35 +16,65 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 ///     Provides methods to retrieve type information and convert PowerShell objects into data table structures for display
 ///     in the grid view.
 /// </summary>
-/// <param name="cmdlet">The PSCmdlet instance used to invoke PowerShell commands.</param>
-public class TypeGetter(PSCmdlet cmdlet)
+public class TypeGetter
 {
+    private readonly Dictionary<string, FormatViewDefinition?> _formatCache = new();
+
     /// <summary>
-    ///     Gets the format view definition for the specified PowerShell object by querying the format data.
+    ///     Gets the format view definition for the specified type name, using a cache to avoid redundant lookups.
+    /// </summary>
+    /// <param name="typeName">The full type name to get the format view definition for.</param>
+    /// <returns>The format view definition if found; otherwise, <see langword="null" />.</returns>
+    private FormatViewDefinition? GetFormatViewDefinitionForType(string typeName)
+    {
+        if (_formatCache.TryGetValue(typeName, out var cached)) return cached;
+
+        // Always create a new runspace to avoid pipeline concurrency issues
+        // when called from within an active PowerShell cmdlet/pipeline
+        using var runspace = RunspaceFactory.CreateRunspace();
+        runspace.Open();
+
+        try
+        {
+            using var ps = System.Management.Automation.PowerShell.Create();
+            ps.Runspace = runspace;
+            ps.AddCommand("Get-FormatData").AddParameter("TypeName", typeName);
+
+            var results = ps.Invoke();
+
+            if (results.Count == 0)
+            {
+                ps.Commands.Clear();
+                ps.AddCommand("Get-FormatData")
+                    .AddParameter("TypeName", typeName);
+                results = ps.Invoke();
+            }
+
+            FormatViewDefinition? result = null;
+            if (results.Count > 0)
+            {
+                var extendedTypeDefinition = results[0].BaseObject as ExtendedTypeDefinition;
+                result = extendedTypeDefinition?.FormatViewDefinition[0];
+            }
+
+            _formatCache[typeName] = result;
+            return result;
+        }
+        finally
+        {
+            runspace.Close();
+        }
+    }
+
+    /// <summary>
+    ///     Gets the format view definition for the specified PowerShell object using the current runspace.
     /// </summary>
     /// <param name="obj">The PowerShell object to get the format view definition for.</param>
     /// <returns>The format view definition if found; otherwise, <see langword="null" />.</returns>
-    public FormatViewDefinition? GetFormatViewDefinitionForObject(PSObject obj)
+    private FormatViewDefinition? GetFormatViewDefinitionForObject(PSObject obj)
     {
         var typeName = obj.BaseObject.GetType().FullName;
-
-        var types = cmdlet.InvokeCommand.InvokeScript(@"Microsoft.PowerShell.Utility\Get-FormatData " + typeName)
-            .ToList();
-
-        // No custom type definitions found - try the PowerShell specific format data
-        if (types.Count == 0)
-        {
-            types = cmdlet.InvokeCommand
-                .InvokeScript(
-                    @"Microsoft.PowerShell.Utility\Get-FormatData -PowerShellVersion $PSVersionTable.PSVersion " +
-                    typeName).ToList();
-
-            if (types.Count == 0) return null;
-        }
-
-        var extendedTypeDefinition = types[0].BaseObject as ExtendedTypeDefinition;
-
-        return extendedTypeDefinition?.FormatViewDefinition[0];
+        return GetFormatViewDefinitionForType(typeName!);
     }
 
     /// <summary>
@@ -172,14 +203,13 @@ public class TypeGetter(PSCmdlet cmdlet)
     /// </summary>
     /// <param name="psObjects">The list of PowerShell objects to convert.</param>
     /// <returns>A <see cref="DataTable" /> containing the columns and rows extracted from the PowerShell objects.</returns>
-    public DataTable CastObjectsToTableView(List<PSObject> psObjects)
+    public static DataTable CastObjectsToTableView(List<PSObject> psObjects)
     {
-        var objectFormats = psObjects.Select(GetFormatViewDefinitionForObject).ToList();
-
-        var dataTableColumns = GetDataColumnsForObject(psObjects);
+        var typeGetter = new TypeGetter();
+        var dataTableColumns = typeGetter.GetDataColumnsForObject(psObjects);
 
         var dataTableRows = new List<DataTableRow>();
-        for (var i = 0; i < objectFormats.Count; i++)
+        for (var i = 0; i < psObjects.Count; i++)
         {
             var dataTableRow = CastObjectToDataTableRow(psObjects[i], dataTableColumns, i);
             dataTableRows.Add(dataTableRow);

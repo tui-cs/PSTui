@@ -14,7 +14,7 @@
     "OCGV": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
-      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView }\"",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Select-Object ProcessName, Id, Handles, NPM, PM, WS, CPU | Out-ConsoleGridView}\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCGV -MinUi": {

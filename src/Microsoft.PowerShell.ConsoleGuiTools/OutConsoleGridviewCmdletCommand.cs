@@ -4,6 +4,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Internal;
 using Microsoft.PowerShell.OutGridView.Models;
@@ -23,7 +24,7 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     private const string DATA_NOT_QUALIFIED_FOR_GRID_VIEW = nameof(DATA_NOT_QUALIFIED_FOR_GRID_VIEW);
     private const string ENVIRONMENT_NOT_SUPPORTED_FOR_GRID_VIEW = nameof(ENVIRONMENT_NOT_SUPPORTED_FOR_GRID_VIEW);
 
-    private readonly List<PSObject> _psObjects = new();
+    private readonly List<PSObject> _psObjects = [];
     private readonly OutConsoleGridView _outConsoleGridView = new();
 
     #endregion Properties
@@ -156,22 +157,20 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
         // Return if no objects
         if (_psObjects.Count == 0) return;
 
-        var typeGetter = new TypeGetter(this);
-        var dataTable = typeGetter.CastObjectsToTableView(_psObjects);
         var applicationData = new ApplicationData
         {
+            PSObjects = _psObjects.Cast<object>().ToList(),
             Title = Title ?? "Out-ConsoleGridView",
             OutputMode = OutputMode,
             Filter = Filter,
             MinUI = MinUI,
-            DataTable = dataTable,
             UseNetDriver = UseNetDriver,
             Verbose = Verbose,
             Debug = Debug,
             ModuleVersion = MyInvocation.MyCommand.Version.ToString()
         };
 
-        var selectedIndexes = _outConsoleGridView.Start(applicationData);
+        var selectedIndexes = _outConsoleGridView.Run(applicationData);
         foreach (var idx in selectedIndexes)
         {
             var selectedObject = _psObjects[idx];

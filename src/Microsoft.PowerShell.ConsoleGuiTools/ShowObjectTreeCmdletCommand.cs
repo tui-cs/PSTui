@@ -4,6 +4,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Internal;
 using Microsoft.PowerShell.OutGridView.Models;
@@ -142,6 +143,7 @@ public class ShowObjectTreeCmdletCommand : PSCmdlet, IDisposable
 
         var applicationData = new ApplicationData
         {
+            PSObjects = _psObjects.Cast<object>().ToList(),
             Title = Title ?? "Show-ObjectTree",
             Filter = Filter,
             MinUI = MinUI,
@@ -150,7 +152,7 @@ public class ShowObjectTreeCmdletCommand : PSCmdlet, IDisposable
             ModuleVersion = MyInvocation.MyCommand.Version.ToString()
         };
 
-        ShowObjectView.Run(_psObjects, applicationData);
+        ShowObjectView.Run(applicationData);
     }
 
     /// <summary>
