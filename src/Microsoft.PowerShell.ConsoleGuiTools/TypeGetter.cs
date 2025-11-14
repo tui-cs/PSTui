@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Management.Automation;
@@ -29,9 +30,9 @@ public class TypeGetter
     {
         if (_formatCache.TryGetValue(typeName, out var cached)) return cached;
 
-        // Always create a new runspace to avoid pipeline concurrency issues
-        // when called from within an active PowerShell cmdlet/pipeline
-        using var runspace = RunspaceFactory.CreateRunspace();
+        // Create a runspace with the default initial session state to load format data
+        var iss = InitialSessionState.CreateDefault();
+        using var runspace = RunspaceFactory.CreateRunspace(iss);
         runspace.Open();
 
         try
@@ -42,14 +43,6 @@ public class TypeGetter
 
             var results = ps.Invoke();
 
-            if (results.Count == 0)
-            {
-                ps.Commands.Clear();
-                ps.AddCommand("Get-FormatData")
-                    .AddParameter("TypeName", typeName);
-                results = ps.Invoke();
-            }
-
             FormatViewDefinition? result = null;
             if (results.Count > 0)
             {
@@ -57,6 +50,7 @@ public class TypeGetter
                 result = extendedTypeDefinition?.FormatViewDefinition[0];
             }
 
+            Debug.Assert(result is not null);
             _formatCache[typeName] = result;
             return result;
         }
