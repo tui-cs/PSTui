@@ -73,8 +73,14 @@ public class TypeGetter
     /// <returns>The format view definition if found; otherwise, <see langword="null" />.</returns>
     private FormatViewDefinition? GetFormatViewDefinitionForObject(PSObject obj)
     {
-        var typeName = obj.BaseObject.GetType().FullName;
-        return GetFormatViewDefinitionForType(typeName!);
+        string? typeName = obj.BaseObject.GetType().FullName;
+        if (typeName is null)
+        {
+            return null;
+        }
+        if (_formatCache.TryGetValue(typeName, out var cached))
+            return cached;
+        return GetFormatViewDefinitionForType(typeName);
     }
 
     /// <summary>
@@ -102,13 +108,13 @@ public class TypeGetter
             if (isDecimal)
             {
                 valuePairs[dataColumn.ToString()] = new DecimalValue
-                    { DisplayValue = stringValue, SortValue = decimalValue };
+                { DisplayValue = stringValue, SortValue = decimalValue };
             }
             else
             {
                 var stringDecorated = new StringDecorated(stringValue);
                 valuePairs[dataColumn.ToString()] = new StringValue
-                    { DisplayValue = stringDecorated.ToString(OutputRendering.PlainText) };
+                { DisplayValue = stringDecorated.ToString(OutputRendering.PlainText) };
             }
         }
 
@@ -130,9 +136,13 @@ public class TypeGetter
 
         // If every value in a column could be a decimal, assume that it is supposed to be a decimal
         foreach (var dataRow in dataRows)
-        foreach (var dataColumn in dataTableColumns)
-            if (!(dataRow[dataColumn.ToString()] is DecimalValue))
-                dataColumn.StringType = typeof(string).FullName;
+        {
+            foreach (var dataColumn in dataTableColumns)
+            {
+                if (dataRow[dataColumn.ToString()] is not DecimalValue)
+                    dataColumn.StringType = typeof(string).FullName;
+            }
+        }
     }
 
     /// <summary>
