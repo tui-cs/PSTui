@@ -54,12 +54,53 @@ internal sealed class OutGridViewWindow : Window
                 : MARGIN_LEFT
         };
 
-        // Convert PSObjects to DataTable
-        if (_applicationData.PSObjects is { Count: > 0 })
+        // Convert PSObjects to DataTable using the provided format data
+        if (_applicationData.PSObjects is { Count: > 0 } && _applicationData.FormatData is { Count: > 0 })
         {
-            var typeGetter = new TypeGetter();
             var psObjects = _applicationData.PSObjects.Cast<PSObject>().ToList();
-            _dataTable = TypeGetter.CastObjectsToTableView(psObjects);
+
+            // Create columns from the format data with format strings based on property type AND name
+            var dataTableColumns = _applicationData.FormatData
+                .Select(prop =>
+                {
+                    var column = new DataTableColumn(prop.Name, $"$_.{prop.Name}");
+
+                    // Set format string based on property type and name
+                    var propType = prop.TypeNameOfValue;
+                    var propName = prop.Name;
+                    
+                    column.FormatString = propType switch
+                    {
+                        "System.DateTime" => "G",  // General date/time
+                        "System.Decimal" => "N2",  // Decimal with 2 decimal places
+                        "System.Double" or "System.Single" => "N2",  // Floating point with 2 decimals
+                        
+                        // For integers, check if it's an identifier or a quantity
+                        "System.Int32" or "System.Int64" or "System.Int16" or "System.Byte" 
+                            when IsIdentifierProperty(propName) => null,  // No formatting for IDs
+                        
+                        "System.Int32" or "System.Int64" or "System.Int16" or "System.Byte" 
+                            => "N0",  // Quantities get thousand separators
+                        
+                        _ => null
+                    };
+
+                    return column;
+                })
+                .ToList();
+
+            // Convert each object to a row
+            var dataTableRows = new List<DataTableRow>();
+            for (var i = 0; i < psObjects.Count; i++)
+            {
+                var dataTableRow = TypeGetter.CastObjectToDataTableRow(psObjects[i], _applicationData.FormatData, dataTableColumns, i);
+                dataTableRows.Add(dataTableRow);
+            }
+
+            // Set the column types based on the actual data
+            SetTypesOnDataColumns(dataTableRows, dataTableColumns);
+
+            _dataTable = new DataTable(dataTableColumns, dataTableRows);
         }
         else
         {
@@ -79,6 +120,50 @@ internal sealed class OutGridViewWindow : Window
         AddStatusBar();
 
         _listView?.SetFocus();
+    }
+
+    /// <summary>
+    ///     Determines if a property name represents an identifier rather than a quantity.
+    ///     Identifiers should not have thousand separators.
+    /// </summary>
+    /// <param name="propertyName">The name of the property.</param>
+    /// <returns>True if the property is likely an identifier; otherwise false.</returns>
+    private static bool IsIdentifierProperty(string propertyName)
+    {
+        // Common identifier property names
+        return propertyName.Equals("Id", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("PID", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("ProcessId", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("SessionId", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("SI", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("ParentProcessId", StringComparison.OrdinalIgnoreCase) ||
+               propertyName.Equals("ThreadId", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    ///     Sets the data type on each column based on the values in the data rows.
+    ///     If all values in a column can be parsed as decimal, the column type is set to decimal; otherwise, it's set to
+    ///     string.
+    /// </summary>
+    /// <param name="dataTableRows">The list of data table rows to analyze.</param>
+    /// <param name="dataTableColumns">The list of data table columns to update with type information.</param>
+    private static void SetTypesOnDataColumns(List<DataTableRow> dataTableRows, List<DataTableColumn> dataTableColumns)
+    {
+        var dataRows = dataTableRows.Select(x => x.Values);
+
+        foreach (var dataColumn in dataTableColumns)
+            dataColumn.StringType = typeof(decimal).FullName;
+
+        // If every value in a column could be a decimal, assume that it is supposed to be a decimal
+        foreach (var dataRow in dataRows)
+        {
+            foreach (var dataColumn in dataTableColumns)
+            {
+                if (dataRow[dataColumn.ToString()] is not DecimalValue)
+                    dataColumn.StringType = typeof(string).FullName;
+            }
+        }
     }
 
     /// <summary>

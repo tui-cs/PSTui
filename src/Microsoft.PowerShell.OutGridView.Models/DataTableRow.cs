@@ -15,6 +15,11 @@ public interface IValue : IComparable
     ///     Gets or sets the string representation of the value for display purposes.
     /// </summary>
     string DisplayValue { get; set; }
+
+    /// <summary>
+    ///     Gets the original object value before formatting.
+    /// </summary>
+    object? OriginalValue { get; }
 }
 
 /// <summary>
@@ -31,6 +36,11 @@ public class DecimalValue : IValue
     ///     Gets or sets the decimal value used for sorting.
     /// </summary>
     public decimal SortValue { get; set; }
+
+    /// <summary>
+    ///     Gets the original decimal value.
+    /// </summary>
+    public object? OriginalValue => SortValue;
 
     /// <summary>
     ///     Compares the current instance with another object of the same type.
@@ -56,6 +66,16 @@ public class StringValue : IValue
     ///     Gets or sets the string value for display and sorting purposes.
     /// </summary>
     public required string DisplayValue { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the original object value before conversion to string.
+    /// </summary>
+    public object? RawValue { get; set; }
+
+    /// <summary>
+    ///     Gets the original object value.
+    /// </summary>
+    public object? OriginalValue => RawValue ?? DisplayValue;
 
     /// <summary>
     ///     Compares the current instance with another object of the same type.

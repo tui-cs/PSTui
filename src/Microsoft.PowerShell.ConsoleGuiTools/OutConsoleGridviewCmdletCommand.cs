@@ -157,9 +157,12 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
         // Return if no objects
         if (_psObjects.Count == 0) return;
 
+        var formatData = GetFormatDataForObjects(_psObjects);
+
         var applicationData = new ApplicationData
         {
             PSObjects = _psObjects.Cast<object>().ToList(),
+            FormatData = formatData.ToList(),
             Title = Title ?? "Out-ConsoleGridView",
             OutputMode = OutputMode,
             Filter = Filter,
@@ -186,5 +189,39 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     {
         _outConsoleGridView.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    ///     Gets the format data (property information) for the PowerShell objects using PowerShell's formatting system.
+    /// </summary>
+    /// <param name="psObjects">The list of PowerShell objects to get format data for.</param>
+    /// <returns>A collection of PSPropertyInfo representing the properties to display.</returns>
+    private IEnumerable<PSPropertyInfo> GetFormatDataForObjects(List<PSObject> psObjects)
+    {
+        if (psObjects.Count == 0)
+        {
+            return Array.Empty<PSPropertyInfo>();
+        }
+
+        var firstObject = psObjects[0];
+
+        // Try to get the DefaultDisplayPropertySet from PSStandardMembers
+        var standardMembers = firstObject.Members["PSStandardMembers"]?.Value as PSMemberSet;
+        var defaultDisplayPropertySet = standardMembers?.Members["DefaultDisplayPropertySet"]?.Value as PSPropertySet;
+
+        if (defaultDisplayPropertySet?.ReferencedPropertyNames != null &&
+            defaultDisplayPropertySet.ReferencedPropertyNames.Count > 0)
+        {
+            // Return only the properties in the DefaultDisplayPropertySet
+            return defaultDisplayPropertySet.ReferencedPropertyNames
+                .Select(name => firstObject.Properties[name])
+                .Where(prop => prop != null)
+                .Cast<PSPropertyInfo>();
+        }
+
+        // Fall back to all visible properties (excluding PS* internal properties)
+        return firstObject.Properties
+            .Where(p => !p.Name.StartsWith("PS", StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 }

@@ -17,6 +17,11 @@ public class ApplicationData
     public List<object>? PSObjects { get; set; }
 
     /// <summary>
+    ///     Gets or sets the PowerShell format data for the objects in <see cref="PSObjects"/>.
+    /// </summary>
+    public List<PSPropertyInfo>? FormatData { get; set; }
+
+    /// <summary>
     ///     Gets or sets the output mode that determines how items can be selected and returned.
     /// </summary>
     public OutputModeOption OutputMode { get; set; }
@@ -56,5 +61,4 @@ public class ApplicationData
     ///     Gets or sets the version of the module.
     /// </summary>
     public string? ModuleVersion { get; set; }
-
 }
