@@ -16,7 +16,7 @@ using Terminal.Gui.Views;
 
 namespace Microsoft.PowerShell.ConsoleGuiTools;
 
-internal sealed class ConsoleGui : IDisposable
+internal sealed class OutConsoleGridView : IDisposable
 {
     private const string FILTER_LABEL = "_Filter";
 

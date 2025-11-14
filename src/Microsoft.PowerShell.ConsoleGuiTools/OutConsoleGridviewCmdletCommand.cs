@@ -14,7 +14,7 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 ///     Sends output to an interactive table in a separate console window. This class is invoked by PowerShell when the
 ///     Out-ConsoleGridView cmdlet is called.
 /// </summary>
-[Cmdlet(VerbsData.Out, "ConsoleGridView")]
+[Cmdlet(VerbsData.Out, "OutConsoleGridView")]
 [Alias("ocgv")]
 public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
 {
@@ -24,7 +24,7 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     private const string ENVIRONMENT_NOT_SUPPORTED_FOR_GRID_VIEW = nameof(ENVIRONMENT_NOT_SUPPORTED_FOR_GRID_VIEW);
 
     private readonly List<PSObject> _psObjects = new();
-    private readonly ConsoleGui _consoleGui = new();
+    private readonly OutConsoleGridView _outConsoleGridView = new();
 
     #endregion Properties
 
@@ -171,7 +171,7 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
             ModuleVersion = MyInvocation.MyCommand.Version.ToString()
         };
 
-        var selectedIndexes = _consoleGui.Start(applicationData);
+        var selectedIndexes = _outConsoleGridView.Start(applicationData);
         foreach (var idx in selectedIndexes)
         {
             var selectedObject = _psObjects[idx];
@@ -185,7 +185,7 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     /// </summary>
     public void Dispose()
     {
-        _consoleGui.Dispose();
+        _outConsoleGridView.Dispose();
         GC.SuppressFinalize(this);
     }
 }
