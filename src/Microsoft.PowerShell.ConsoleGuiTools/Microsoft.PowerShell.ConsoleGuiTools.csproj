@@ -2,7 +2,7 @@
     <Import Project="..\..\ConsoleGuiTools.Common.props" />
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
-        <LangVersion>latest</LangVersion>
+        <LangVersion>preview</LangVersion>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include ="../Microsoft.PowerShell.OutGridView.Models/Microsoft.PowerShell.OutGridView.Models.csproj" />
+        <ProjectReference Include="../Microsoft.PowerShell.OutGridView.Models/Microsoft.PowerShell.OutGridView.Models.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -119,7 +119,8 @@ internal sealed class ConsoleGui : IDisposable
         {
             CalculateColumnWidths(gridHeaders);
 
-            _header!.Text = GridViewHelpers.GetPaddedString(gridHeaders, _gridViewDetails!.ListViewOffset,
+            if (_header is not null)
+                _header.Text = GridViewHelpers.GetPaddedString(gridHeaders, _gridViewDetails!.ListViewOffset,
                 _gridViewDetails.ListViewColumnWidths);
             UpdateDisplayStrings(_listViewSource);
             ApplyFilter();
@@ -269,19 +270,15 @@ internal sealed class ConsoleGui : IDisposable
         {
             shortcuts.Add(new Shortcut(Key.A.WithCtrl, "Select All", () =>
             {
-                // This selects only the items that match the Filter
-                var gvds = _listView!.Source as GridViewDataSource;
-                gvds!.GridViewRowList.ForEach(i => i.IsMarked = true);
-                _listView.SetNeedsDraw();
+                _listView?.MarkAll(true);
+                _listView?.SetNeedsDraw(); // Bug in Terminal.Gui where MarkAll doesn't refresh display
             }));
 
             // Ctrl-D is commonly used in GUIs for select-none 
             shortcuts.Add(new Shortcut(Key.D.WithCtrl, "Select None", () =>
             {
-                // This un-selects only the items that match the Filter
-                var gvds = _listView!.Source as GridViewDataSource;
-                gvds!.GridViewRowList.ForEach(i => i.IsMarked = false);
-                _listView.SetNeedsDraw();
+                _listView?.MarkAll(false);
+                _listView?.SetNeedsDraw(); // Bug in Terminal.Gui where MarkAll doesn't refresh display
             }));
         }
 
@@ -480,6 +477,9 @@ internal sealed class ConsoleGui : IDisposable
         _listView.AllowsMultipleSelection = _applicationData.OutputMode == OutputModeOption.Multiple;
 
         _listView.SelectedItem = 0;
+
+        // ListView captures Ctrl-A (select all) - we handle this in the status bar
+        _listView.KeyBindings.Remove(Key.A.WithCtrl);
 
         win.Add(_listView);
     }
