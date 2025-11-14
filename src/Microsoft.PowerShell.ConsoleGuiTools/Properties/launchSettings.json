@@ -5,10 +5,22 @@
       "commandLineArgs": "C:\\Program Files\\PowerShell\\7\\pwsh.exe -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView }\"",
       "workingDirectory": "$(TargetDir)"
     },
-    "Debug OCGV": {
+    "OCGV -Filter": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -Filter com }\"",
+      "workingDirectory": "$(TargetDir)"
+    },
+    "OCGV": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView }\"",
+      "workingDirectory": "$(TargetDir)"
+    },
+    "OCGV -MinUi": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -MinUi }\"",
       "workingDirectory": "$(TargetDir)"
     }
   }

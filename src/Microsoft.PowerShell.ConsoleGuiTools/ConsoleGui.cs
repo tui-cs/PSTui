@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
@@ -27,6 +28,7 @@ internal sealed class ConsoleGui : IDisposable
     private bool _cancelled;
     private Label? _filterLabel;
     private TextField? _filterField;
+    private View? _filterErrorView;
     private Label? _header;
     private ListView? _listView;
     // _inputSource contains the full set of Input data and tracks any items the user
@@ -119,15 +121,15 @@ internal sealed class ConsoleGui : IDisposable
 
             _header!.Text = GridViewHelpers.GetPaddedString(gridHeaders, _gridViewDetails!.ListViewOffset,
                 _gridViewDetails.ListViewColumnWidths);
-            ApplyFilter();
             UpdateDisplayStrings(_listViewSource);
+            ApplyFilter();
         }
     }
 
     private GridViewDataSource LoadData()
     {
         var items = new List<GridViewRow>();
-        if (_applicationData == null) 
+        if (_applicationData == null)
             return new GridViewDataSource(items);
 
         for (int i = 0; i < _applicationData.DataTable.Data.Count; i++)
@@ -173,9 +175,13 @@ internal sealed class ConsoleGui : IDisposable
         // The ListView is always filled with a (filtered) copy of _inputSource.
         // We listen for `MarkChanged` events on this filtered list and apply those changes up to _inputSource.
 
+        GridViewRow? selectedItem = null;
+
         if (_listViewSource != null)
         {
-            _listViewSource.MarkChanged -= ListViewSource_MarkChanged;
+            // Get the item that is currently selected so we can restore selection after re-applying filter
+            selectedItem = _listViewSource?.GridViewRowList.ElementAtOrDefault(_listView?.SelectedItem ?? 0);
+            _listViewSource!.MarkChanged -= ListViewSource_MarkChanged;
             _listViewSource = null;
         }
 
@@ -183,15 +189,43 @@ internal sealed class ConsoleGui : IDisposable
         {
             _inputSource = LoadData();
         }
+
+
         if (_applicationData != null)
-            _listViewSource = new GridViewDataSource(GridViewHelpers.FilterData(_inputSource.GridViewRowList, _applicationData.Filter ?? string.Empty));
+        {
+            try
+            {
+                _listViewSource = new GridViewDataSource(GridViewHelpers.FilterData(_inputSource.GridViewRowList,
+                    _applicationData.Filter ?? string.Empty));
+            }
+            catch (RegexParseException ex)
+            {
+                _filterErrorView!.Text = ex.Message;
+            }
+        }
+
         _listViewSource?.MarkChanged += ListViewSource_MarkChanged;
         _listView?.Source = _listViewSource;
+
+        // Restore selection - find the previously selected item in the new filtered list
+        if (selectedItem is not null && _listViewSource != null)
+        {
+            int newIndex =
+                _listViewSource.GridViewRowList.FindIndex(i => i.OriginalIndex == selectedItem.OriginalIndex);
+            if (newIndex >= 0)
+            {
+                _listView!.SelectedItem = newIndex;
+            }
+        }
+        if (_listView?.SelectedItem == -1)
+        {
+            _listView!.SelectedItem = 0;
+        }
     }
 
     private void ListViewSource_MarkChanged(object? s, GridViewDataSource.RowMarkedEventArgs a)
     {
-        _inputSource.GridViewRowList[a.Row.OriginalIndex].IsMarked = a.Row.IsMarked;
+        _inputSource?.GridViewRowList[a.Row.OriginalIndex].IsMarked = a.Row.IsMarked;
     }
 
     private static void Accept()
@@ -211,12 +245,6 @@ internal sealed class ConsoleGui : IDisposable
         var win = new Window
         {
             Title = _applicationData!.Title ?? "Out-ConsoleGridView",
-            X = _applicationData.MinUI ? -1 : 0,
-            Y = _applicationData.MinUI ? -1 : 0,
-
-            // By using Dim.Fill(), it will automatically resize without manual intervention
-            Width = Dim.Fill(_applicationData.MinUI ? -1 : 0),
-            Height = Dim.Fill(_applicationData.MinUI ? -1 : 1)
         };
 
         if (_applicationData.MinUI)
@@ -293,14 +321,12 @@ internal sealed class ConsoleGui : IDisposable
             $"{Application.Driver} v{FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location).ProductVersion}", null));
         }
 
-        var statusBar = new StatusBar(shortcuts);
-        statusBar.Visible = visible;
-        win.Add(statusBar);
+        win.Add(new StatusBar(shortcuts));
     }
 
     private void CalculateColumnWidths(List<string> gridHeaders)
     {
-        _gridViewDetails.ListViewColumnWidths = new int[gridHeaders.Count];
+        _gridViewDetails!.ListViewColumnWidths = new int[gridHeaders.Count];
         var listViewColumnWidths = _gridViewDetails.ListViewColumnWidths;
 
         for (int i = 0; i < gridHeaders.Count; i++)
@@ -371,12 +397,15 @@ internal sealed class ConsoleGui : IDisposable
         _filterField.KeyBindings.Remove(Key.A.WithCtrl);
         _filterField.KeyBindings.Remove(Key.D.WithCtrl);
 
-        var filterErrorLabel = new Label
+        _filterErrorView = new View
         {
             Text = string.Empty,
             X = Pos.Right(_filterLabel) + 1,
             Y = Pos.Top(_filterLabel) + 1,
-            Width = Dim.Fill() - _filterLabel.Text!.Length
+            Width = Dim.Fill() - _filterLabel.Text!.Length,
+            // This enables the height to go 0, and the view to disappear when there is no error
+            Height = Dim.Auto(DimAutoStyle.Text),
+            SchemeName = "Error"
         };
 
         _filterField.TextChanged += (sender, e) =>
@@ -384,20 +413,19 @@ internal sealed class ConsoleGui : IDisposable
             string? filterText = _filterField.Text?.ToString();
             try
             {
-                filterErrorLabel.Text = " ";
-                filterErrorLabel.SetNeedsDraw();
-                _applicationData!.Filter = filterText;
+                _filterErrorView.Text = string.Empty;
+                _filterErrorView.SetNeedsDraw();
+                _applicationData!.Filter = filterText!;
                 ApplyFilter();
 
             }
             catch (Exception ex)
             {
-                filterErrorLabel.Text = ex.Message;
-                filterErrorLabel.SchemeName = "Error";
+                _filterErrorView.Text = ex.Message;
             }
         };
 
-        win.Add(_filterLabel, _filterField, filterErrorLabel);
+        win.Add(_filterLabel, _filterField, _filterErrorView);
 
         _filterField.Text = _applicationData.Filter ?? string.Empty;
         _filterField.CursorPosition = _filterField.Text.Length;
@@ -415,7 +443,7 @@ internal sealed class ConsoleGui : IDisposable
         }
         else
         {
-            _header.Y = 2;
+            _header.Y = Pos.Bottom(_filterErrorView!);
         }
         win.Add(_header);
 
@@ -451,8 +479,7 @@ internal sealed class ConsoleGui : IDisposable
         _listView.AllowsMarking = _applicationData.OutputMode != OutputModeOption.None;
         _listView.AllowsMultipleSelection = _applicationData.OutputMode == OutputModeOption.Multiple;
 
-        // In Terminal.Gui v2, key bindings work differently
-        // The ListView already handles Space for toggling marks by default
+        _listView.SelectedItem = 0;
 
         win.Add(_listView);
     }
