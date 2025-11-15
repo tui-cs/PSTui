@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -34,14 +35,6 @@ namespace Microsoft.PowerShell.ConsoleGuiTools
             return filteredList;
         }
 
-        /// <summary>
-        /// Formats a list of strings into a single padded string for display in the grid view.
-        /// Each string is padded to fit its corresponding column width, with newlines replaced by encoded representations.
-        /// </summary>
-        /// <param name="strings">The list of strings to format, one per column.</param>
-        /// <param name="offset">The left offset (padding) to add before the first column.</param>
-        /// <param name="listViewColumnWidths">The width of each column. If null, an empty string is returned.</param>
-        /// <returns>A formatted string with columns padded and separated by spaces, or an empty string if column widths are not provided.</returns>
         public static string GetPaddedString(List<string>? strings, int offset, int[]? listViewColumnWidths)
         {
             if (listViewColumnWidths is null)
@@ -71,7 +64,18 @@ namespace Microsoft.PowerShell.ConsoleGuiTools
                 strings[i] = strings[i].Replace("\n", "`n");
 
                 // If the string doesn't fit in the column, append an ellipsis.
-                if (strings[i].Length > listViewColumnWidths[i])
+                // Guard against negative or very small column widths
+                if (listViewColumnWidths[i] <= 0)
+                {
+                    // Skip columns with zero or negative width (but separator already added above)
+                }
+                else if (listViewColumnWidths[i] < 4)
+                {
+                    // For very small columns (< 4), just truncate without ellipsis
+                    var truncateLength = Math.Min(strings[i].Length, listViewColumnWidths[i]);
+                    builder.Append(strings[i], 0, truncateLength);
+                }
+                else if (strings[i].Length > listViewColumnWidths[i])
                 {
                     builder.Append(strings[i], 0, listViewColumnWidths[i] - 3);
                     builder.Append("...");

@@ -63,7 +63,7 @@ internal sealed class GridViewDataSource : IListDataSource
     /// <param name="start">The starting position within the item's display string.</param>
     public void Render(ListView listView, bool selected, int item, int col, int line, int width, int start = 0)
     {
-        listView.Move(col, line);
+        listView.Move(col - start, line);
 
         var driver = Application.Driver;
         var row = GridViewRowList[item];

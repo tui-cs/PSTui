@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
@@ -27,13 +29,14 @@ internal sealed class OutGridViewWindow : Window
     private Label? _filterLabel;
     private TextField? _filterField;
     private View? _filterErrorView;
-    private Label? _header;
+    private View? _header;
     private ListView? _listView;
     private GridViewDataSource? _inputSource;
     private GridViewDataSource? _listViewSource;
     private readonly ApplicationData _applicationData;
     private readonly GridViewDetails _gridViewDetails;
     private readonly DataTable _dataTable;
+    private int[]? _naturalColumnWidths;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="OutGridViewWindow" /> class with the specified application data.
@@ -54,61 +57,16 @@ internal sealed class OutGridViewWindow : Window
                 : MARGIN_LEFT
         };
 
-        // Convert PSObjects to DataTable using the provided format data
-        if (_applicationData.PSObjects is { Count: > 0 } && _applicationData.FormatData is { Count: > 0 })
+        // Convert PSObjects to DataTable using TypeGetter which handles format data properly
+        if (_applicationData.PSObjects is { Count: > 0 })
         {
             var psObjects = _applicationData.PSObjects.Cast<PSObject>().ToList();
-
-            // Create columns from the format data with format strings based on property type AND name
-            var dataTableColumns = _applicationData.FormatData
-                .Select(prop =>
-                {
-                    var column = new DataTableColumn(prop.Name, $"$_.{prop.Name}");
-
-                    // Set format string based on property type and name
-                    var propType = prop.TypeNameOfValue;
-                    var propName = prop.Name;
-                    
-                    column.FormatString = propType switch
-                    {
-                        "System.DateTime" => "G",  // General date/time
-                        "System.Decimal" => "N2",  // Decimal with 2 decimal places
-                        "System.Double" or "System.Single" => "N2",  // Floating point with 2 decimals
-                        
-                        // For integers, check if it's an identifier or a quantity
-                        "System.Int32" or "System.Int64" or "System.Int16" or "System.Byte" 
-                            when IsIdentifierProperty(propName) => null,  // No formatting for IDs
-                        
-                        "System.Int32" or "System.Int64" or "System.Int16" or "System.Byte" 
-                            => "N0",  // Quantities get thousand separators
-                        
-                        _ => null
-                    };
-
-                    return column;
-                })
-                .ToList();
-
-            // Convert each object to a row
-            var dataTableRows = new List<DataTableRow>();
-            for (var i = 0; i < psObjects.Count; i++)
-            {
-                var dataTableRow = TypeGetter.CastObjectToDataTableRow(psObjects[i], _applicationData.FormatData, dataTableColumns, i);
-                dataTableRows.Add(dataTableRow);
-            }
-
-            // Set the column types based on the actual data
-            SetTypesOnDataColumns(dataTableRows, dataTableColumns);
-
-            _dataTable = new DataTable(dataTableColumns, dataTableRows);
+            _dataTable = TypeGetter.CastObjectsToTableView(psObjects);
         }
         else
         {
             _dataTable = new DataTable([], []);
         }
-
-        // Copy the input DataTable into our master ListView source list
-        _inputSource = LoadData();
 
         if (!_applicationData.MinUI)
         {
@@ -120,6 +78,17 @@ internal sealed class OutGridViewWindow : Window
         AddStatusBar();
 
         _listView?.SetFocus();
+        
+        // Copy the input DataTable into our master ListView source list
+        _inputSource = LoadData();
+        ApplyFilter();
+        _gridViewDetails.UsableWidth = _naturalColumnWidths!.Sum();
+        var gridHeaders = _dataTable?.DataColumns.Select(c => c.Label).ToList();
+
+        if (_header is { })
+            _header.Text = GridViewHelpers.GetPaddedString(gridHeaders, _gridViewDetails.ListViewOffset,
+                _gridViewDetails.ListViewColumnWidths);
+
     }
 
     /// <summary>
@@ -196,8 +165,13 @@ internal sealed class OutGridViewWindow : Window
     private GridViewDataSource LoadData()
     {
         var items = new List<GridViewRow>();
-        if (_dataTable == null || _dataTable.Data.Count == 0)
+        if (_dataTable.Data.Count == 0)
             return new GridViewDataSource(items);
+
+        // Calculate and cache natural column widths
+        var gridHeaders = _dataTable.DataColumns.Select(c => c.Label).ToList();
+        _naturalColumnWidths = CalculateNaturalColumnWidths(gridHeaders);
+        _gridViewDetails.ListViewColumnWidths = _naturalColumnWidths;
 
         for (var i = 0; i < _dataTable.Data.Count; i++)
         {
@@ -205,8 +179,19 @@ internal sealed class OutGridViewWindow : Window
             var valueList = new List<string>();
             foreach (var dataTableColumn in _dataTable.DataColumns)
             {
-                var dataValue = dataTableRow.Values[dataTableColumn.ToString()].DisplayValue;
-                valueList.Add(dataValue);
+                var columnKey = dataTableColumn.ToString();
+
+                // Check if the key exists in the dictionary
+                if (dataTableRow.Values.TryGetValue(columnKey, out var value))
+                {
+                    valueList.Add(value.DisplayValue);
+                }
+                else
+                {
+                    // Key not found - this means the dictionary was populated with different keys
+                    // This is a bug - let's add empty string for now to avoid crash
+                    valueList.Add(string.Empty);
+                }
             }
 
             var displayString = GridViewHelpers.GetPaddedString(valueList, 0, _gridViewDetails.ListViewColumnWidths);
@@ -227,7 +212,7 @@ internal sealed class OutGridViewWindow : Window
     /// <param name="source">The data source containing rows to update.</param>
     private void UpdateDisplayStrings(GridViewDataSource? source)
     {
-        if (source == null || _dataTable == null) return;
+        if (source == null) return;
 
         foreach (var gvr in source.GridViewRowList)
         {
@@ -388,9 +373,11 @@ internal sealed class OutGridViewWindow : Window
     /// </summary>
     private void AddHeaders()
     {
-        _header = new Label
+        _header = new View
         {
-            Y = _applicationData.MinUI ? 0 : Pos.Bottom(_filterErrorView!)
+            Y = _applicationData.MinUI ? 0 : Pos.Bottom(_filterErrorView!),
+            Height = 1,
+            Width = Dim.Auto(DimAutoStyle.Text)
         };
         Add(_header);
 
@@ -416,11 +403,13 @@ internal sealed class OutGridViewWindow : Window
             Source = _inputSource,
             X = MARGIN_LEFT,
             Y = !_applicationData.MinUI ? Pos.Bottom(_filterLabel!) + 2 : 1,
-            Width = Dim.Fill(1),
-            Height = Dim.Fill(),
+            Width = Dim.Fill(),
+            Height = Dim.Fill(1),
             AllowsMarking = _applicationData.OutputMode != OutputModeOption.None,
             AllowsMultipleSelection = _applicationData.OutputMode == OutputModeOption.Multiple,
-            SelectedItem = 0
+            SelectedItem = 0,
+            VerticalScrollBar = { AutoShow = true },
+            HorizontalScrollBar = { AutoShow = true }
         };
 
         _listView.KeyBindings.Remove(Key.A.WithCtrl);
@@ -497,61 +486,98 @@ internal sealed class OutGridViewWindow : Window
     protected override void OnSubViewLayout(LayoutEventArgs args)
     {
         // Create the headers and calculate column widths based on the DataTable
-        var gridHeaders = _dataTable?.DataColumns.Select(c => c.Label).ToList();
 
-        CalculateColumnWidths(gridHeaders);
 
-        if (_header is { })
-            _header.Text = GridViewHelpers.GetPaddedString(gridHeaders, _gridViewDetails.ListViewOffset,
-                _gridViewDetails.ListViewColumnWidths);
-        UpdateDisplayStrings(_listViewSource);
-        ApplyFilter();
+        //if (_naturalColumnWidths!.Sum() > Viewport.Width - 1)
+        //{
+        //    _listView!.HorizontalScrollBar.Visible = true;
+        //}
+        //else
+        //{
+        //    _listView!.HorizontalScrollBar.Visible = false;
+        //}
+        //UpdateDisplayStrings(_listViewSource);
+
+        //ApplyFilter();
         base.OnSubViewLayout(args);
+
+    }
+
+    protected override void OnSubViewsLaidOut(LayoutEventArgs args)
+    {
+        base.OnSubViewsLaidOut(args);
+        _listView?.SetContentSize(new Size(_naturalColumnWidths!.Sum(), _listView.GetContentSize().Height));
+    }
+
+    /// <summary>
+    ///     Calculates the natural column widths needed to display all data without truncation.
+    /// </summary>
+    /// <param name="gridHeaders">The column headers for the grid.</param>
+    /// <returns>An array of column widths where each width is the maximum needed for that column.</returns>
+    private int[] CalculateNaturalColumnWidths(List<string>? gridHeaders)
+    {
+        if (gridHeaders == null)
+            return [];
+
+        var columnWidths = new int[gridHeaders.Count];
+
+        // Start with header widths
+        for (var i = 0; i < gridHeaders.Count; i++)
+            columnWidths[i] = gridHeaders[i].Length;
+
+        // Expand to fit data
+        foreach (var row in _dataTable.Data)
+        {
+            for (var i = 0; i < _dataTable.DataColumns.Count; i++)
+            {
+                var columnKey = _dataTable.DataColumns[i].ToString();
+                if (row.Values.TryGetValue(columnKey, out var value))
+                {
+                    var len = value.DisplayValue.Length;
+                    if (len > columnWidths[i])
+                        columnWidths[i] = len;
+                }
+            }
+        }
+
+        return columnWidths;
     }
 
     /// <summary>
     ///     Calculates optimal column widths based on header and data content, fitting within the available screen width.
     /// </summary>
     /// <param name="gridHeaders">The column headers for the grid.</param>
-    private void CalculateColumnWidths(List<string>? gridHeaders)
+    /// <param name="width"></param>
+    /// <returns><see langword="null"/>If the column widths could not be calculated.</returns>
+    private int[]? CalculateColumnWidths(List<string>? gridHeaders, int width)
     {
-        if (gridHeaders == null || _dataTable == null) return;
+        if (gridHeaders == null) return null;
 
-        _gridViewDetails.ListViewColumnWidths = new int[gridHeaders.Count];
-        var listViewColumnWidths = _gridViewDetails.ListViewColumnWidths;
+        var listViewColumnWidths = _naturalColumnWidths;
 
-        for (var i = 0; i < gridHeaders.Count; i++)
-            listViewColumnWidths[i] = gridHeaders[i].Length;
-
-        foreach (var row in _dataTable.Data)
+        while (GetCurrentTotal(listViewColumnWidths) > width)
         {
-            var index = 0;
-            foreach (var col in row.Values.Take(Application.Top!.Frame.Height / 2))
+            // Find the rightmost column with width > 0 and shrink it
+            var shrinkIndex = -1;
+            for (var i = listViewColumnWidths.Length - 1; i >= 0; i--)
             {
-                var len = col.Value.DisplayValue.Length;
-                if (len > listViewColumnWidths[index])
-                    listViewColumnWidths[index] = len;
-                index++;
-            }
-        }
-
-        _gridViewDetails.UsableWidth = Application.Top!.Frame.Width - MARGIN_LEFT - listViewColumnWidths.Length -
-                                       _gridViewDetails.ListViewOffset;
-        var columnWidthsSum = listViewColumnWidths.Sum();
-        while (columnWidthsSum >= _gridViewDetails.UsableWidth)
-        {
-            var maxWidth = 0;
-            var maxIndex = 0;
-            for (var i = 0; i < listViewColumnWidths.Length; i++)
-                if (listViewColumnWidths[i] > maxWidth)
+                if (listViewColumnWidths[i] > 0)
                 {
-                    maxWidth = listViewColumnWidths[i];
-                    maxIndex = i;
+                    shrinkIndex = i;
+                    break;
                 }
+            }
 
-            listViewColumnWidths[maxIndex]--;
-            columnWidthsSum--;
+            if (shrinkIndex == -1)
+                break;
+
+            listViewColumnWidths[shrinkIndex]--;
         }
+
+        return listViewColumnWidths;
+
+        // Calculate current total: sum of column widths + spaces between visible columns only
+        static int GetCurrentTotal(int[] widths) => widths.Sum() + Math.Max(0, widths.Count(w => w > 0) - 1);
     }
 
     #endregion
