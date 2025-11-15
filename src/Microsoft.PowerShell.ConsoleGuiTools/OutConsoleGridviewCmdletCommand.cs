@@ -67,12 +67,12 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     public SwitchParameter MinUI { set; get; }
 
     /// <summary>
-    ///     Gets or sets a value indicating whether the Terminal.Gui System.Net.Console-based ConsoleDriver will be used
+    ///     Gets or sets a value indicating whether the Terminal.Gui System.Net.Console-based Driver will be used
     ///     instead of the
-    ///     default platform-specific (Windows or Curses) ConsoleDriver.
+    ///     default platform-specific (Windows or Curses) Driver.
     /// </summary>
     [Parameter(HelpMessage =
-        "If specified the Terminal.Gui System.Net.Console-based ConsoleDriver (NetDriver) will be used.")]
+        "If specified the Terminal.Gui System.Net.Console-based Driver (NetDriver) will be used.")]
     public SwitchParameter UseNetDriver { set; get; }
 
     /// <summary>

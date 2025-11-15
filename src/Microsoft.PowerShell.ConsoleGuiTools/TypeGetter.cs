@@ -178,9 +178,14 @@ public class TypeGetter
             }
             else
             {
-                // Return all properties
-                labels = firstObject.Properties.Select(p => p.Name).ToList();
-                propertyAccessors = firstObject.Properties.Select(p => $"$_.\"{p.Name}\"").ToList();
+                // Return all properties - use simple property access format for performance
+                // Filter out PS* metadata properties which are often expensive to compute
+                var properties = firstObject.Properties
+                    .Where(p => p.IsGettable && !p.Name.StartsWith("PS"))
+                    .ToList();
+                
+                labels = properties.Select(p => p.Name).ToList();
+                propertyAccessors = properties.Select(p => $"$_.\"{p.Name}\"").ToList();
             }
         }
         else

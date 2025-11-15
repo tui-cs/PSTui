@@ -40,6 +40,12 @@
       "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; gci | Out-ConsoleGridView}\"",
       "workingDirectory": "$(TargetDir)"
+    },
+    "OCGV -AllProperties": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -AllProperties}\"",
+      "workingDirectory": "$(TargetDir)"
     }
   }
 }

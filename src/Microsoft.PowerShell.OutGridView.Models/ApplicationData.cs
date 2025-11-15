@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using System.Management.Automation;
 
 namespace Microsoft.PowerShell.OutGridView.Models;
 
@@ -42,7 +41,8 @@ public class ApplicationData
     public bool UseNetDriver { get; set; }
 
     /// <summary>
-    ///     Gets or sets a value indicating whether all properties should be displayed.
+    ///     Gets or sets a value indicating whether all properties should be displayed. If false, only default display
+    ///     properties are shown.
     /// </summary>
     public bool AllProperties { get; set; }
 
