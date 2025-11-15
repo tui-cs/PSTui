@@ -393,7 +393,7 @@ public class TypeGetter
 
         // Get the columns using format view definitions
         var typeGetter = new TypeGetter();
-        var dataTableColumns = typeGetter.GetDataColumnsForObject(psObjects, allProperties);
+        List<DataTableColumn> dataTableColumns = typeGetter.GetDataColumnsForObject(psObjects, allProperties).ToList();
 
         // Convert each object to a row
         var dataTableRows = new List<DataTableRow>();
