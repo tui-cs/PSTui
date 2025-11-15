@@ -37,6 +37,7 @@ internal sealed class OutGridViewWindow : Window
     private readonly GridViewDetails _gridViewDetails;
     private readonly DataTable _dataTable;
     private int[]? _naturalColumnWidths;
+    private StatusBar? _statusBar;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="OutGridViewWindow" /> class with the specified application data.
@@ -61,7 +62,7 @@ internal sealed class OutGridViewWindow : Window
         if (_applicationData.PSObjects is { Count: > 0 })
         {
             var psObjects = _applicationData.PSObjects.Cast<PSObject>().ToList();
-            _dataTable = TypeGetter.CastObjectsToTableView(psObjects);
+            _dataTable = TypeGetter.CastObjectsToTableView(psObjects, _applicationData.AllProperties);
         }
         else
         {
@@ -292,6 +293,68 @@ internal sealed class OutGridViewWindow : Window
     #region User Actions
 
     /// <summary>
+    ///     Reloads the data with the specified AllProperties setting.
+    /// </summary>
+    private void ReloadDataWithAllProperties(bool allProperties)
+    {
+        _applicationData.AllProperties = allProperties;
+        
+        // Recreate the data table with the new property settings
+        DataTable newDataTable;
+        if (_applicationData.PSObjects is { Count: > 0 })
+        {
+            var psObjects = _applicationData.PSObjects.Cast<PSObject>().ToList();
+            newDataTable = TypeGetter.CastObjectsToTableView(psObjects, allProperties);
+        }
+        else
+        {
+            newDataTable = new DataTable([], []);
+        }
+
+        // Update the data table reference
+        typeof(OutGridViewWindow)
+            .GetField("_dataTable", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .SetValue(this, newDataTable);
+
+        // Recalculate column widths
+        var gridHeaders = newDataTable.DataColumns.Select(c => c.Label).ToList();
+        _naturalColumnWidths = CalculateNaturalColumnWidths(gridHeaders);
+        _gridViewDetails.ListViewColumnWidths = _naturalColumnWidths;
+        _gridViewDetails.UsableWidth = _naturalColumnWidths.Sum();
+
+        // Update header
+        if (_header is { })
+            _header.Text = GridViewHelpers.GetPaddedString(gridHeaders, _gridViewDetails.ListViewOffset,
+                _gridViewDetails.ListViewColumnWidths);
+
+        // Reload and reapply filter
+        _inputSource = LoadData();
+        ApplyFilter();
+        
+        // Update content size
+        _listView?.SetContentSize(new Size(_naturalColumnWidths.Sum(), _listView.GetContentSize().Height));
+        
+        // Update status bar to show current state
+        UpdateStatusBar();
+        
+        // Force redraw
+        SetNeedsLayout();
+        SetNeedsDraw();
+    }
+
+    /// <summary>
+    ///     Updates the status bar to reflect the current AllProperties state.
+    /// </summary>
+    private void UpdateStatusBar()
+    {
+        if (_statusBar == null) return;
+
+        // Remove and recreate status bar to update the checkbox text
+        Remove(_statusBar);
+        AddStatusBar();
+    }
+
+    /// <summary>
     ///     Accepts the current selection and closes the window.
     /// </summary>
     private static void Accept()
@@ -477,6 +540,35 @@ internal sealed class OutGridViewWindow : Window
             }));
 
         shortcuts.Add(new Shortcut(Key.Esc, "Close", Close));
+
+        CheckBox allPropertiesCheckBox = new CheckBox()
+        {
+            Title = "A_ll Properties",
+            CheckedState = _applicationData.AllProperties ? CheckState.Checked : CheckState.UnChecked,
+            CanFocus = false,
+        };
+        allPropertiesCheckBox.CheckedStateChanging += AllPropertiesCheckBoxOnCheckedStateChanging;
+
+        void AllPropertiesCheckBoxOnCheckedStateChanging(object? sender, ResultEventArgs<CheckState> e)
+        {
+            
+        }
+
+        allPropertiesCheckBox.CheckedStateChanged += AllPropertiesCheckBoxOnCheckedStateChanged;
+
+        void AllPropertiesCheckBoxOnCheckedStateChanged(object? sender, EventArgs<CheckState> e)
+        {
+            ReloadDataWithAllProperties(!_applicationData.AllProperties);
+        }
+
+        Shortcut allPropertiesShortcut = new Shortcut()
+        {
+            CommandView = allPropertiesCheckBox,
+            CanFocus = false,
+            BindKeyToApplication = true,
+        };
+        shortcuts.Add(allPropertiesShortcut);
+        
         if (_applicationData.Verbose || _applicationData.Debug)
         {
             shortcuts.Add(new Shortcut(Key.Empty, $" v{_applicationData.ModuleVersion}", null));
@@ -485,7 +577,8 @@ internal sealed class OutGridViewWindow : Window
                 null));
         }
 
-        Add(new StatusBar(shortcuts));
+        _statusBar = new StatusBar(shortcuts);
+        Add(_statusBar);
     }
 
     #endregion

@@ -76,6 +76,13 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     public SwitchParameter UseNetDriver { set; get; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether all properties should be displayed instead of just the default display properties.
+    /// </summary>
+    [Parameter(HelpMessage =
+        "If specified, all properties of the objects will be displayed instead of just the default display properties.")]
+    public SwitchParameter AllProperties { set; get; }
+
+    /// <summary>
     ///     Gets a value indicating whether the Verbose switch is present.
     /// </summary>
     public bool Verbose => MyInvocation.BoundParameters.ContainsKey("Verbose");
@@ -165,6 +172,7 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
             Filter = Filter,
             MinUI = MinUI,
             UseNetDriver = UseNetDriver,
+            AllProperties = AllProperties,
             Verbose = Verbose,
             Debug = Debug,
             ModuleVersion = MyInvocation.MyCommand.Version.ToString()

@@ -42,6 +42,11 @@ public class ApplicationData
     public bool UseNetDriver { get; set; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether all properties should be displayed.
+    /// </summary>
+    public bool AllProperties { get; set; }
+
+    /// <summary>
     ///     Gets or sets a value indicating whether verbose output is enabled.
     /// </summary>
     public bool Verbose { get; set; }
