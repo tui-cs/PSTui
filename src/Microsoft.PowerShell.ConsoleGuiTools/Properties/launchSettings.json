@@ -8,7 +8,7 @@
     "OCGV -Filter": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
-      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -Filter com }\"",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -Debug -Filter com; Read-Host 'Press Enter to close terminal' ; exit }\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCGV": {

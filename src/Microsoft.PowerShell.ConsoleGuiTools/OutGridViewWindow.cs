@@ -1,3 +1,4 @@
+using Microsoft.PowerShell.OutGridView.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,8 +7,8 @@ using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Microsoft.PowerShell.OutGridView.Models;
 using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -19,9 +20,9 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 ///     Provides the Terminal.Gui Window implementation for displaying tabular data with filtering and selection
 ///     capabilities.
 /// </summary>
-internal sealed class OutGridViewWindow : Window
+internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 {
-    private const string FILTER_LABEL = "_Filter";
+    private const string FILTER_LABEL = "_Filter:";
     private const int MARGIN_LEFT = 0;
     private const int CHECK_WIDTH = 2;
     private readonly ApplicationData _applicationData;
@@ -46,9 +47,18 @@ internal sealed class OutGridViewWindow : Window
     {
         _applicationData = applicationData;
         Title = _applicationData.Title ?? "Out-ConsoleGridView";
+        SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Base);
+        BorderStyle = Window.DefaultBorderStyle;
 
-        if (_applicationData.MinUI)
-            BorderStyle = LineStyle.None;
+        switch (_applicationData.MinUI)
+        {
+            case true:
+                BorderStyle = LineStyle.None;
+                break;
+            case false:
+                AddFilter();
+                break;
+        }
 
         _gridViewDetails = new GridViewDetails
         {
@@ -68,12 +78,7 @@ internal sealed class OutGridViewWindow : Window
             _dataTable = new DataTable([], []);
         }
 
-        if (!_applicationData.MinUI) AddFilter();
-
         AddListView();
-        AddStatusBar();
-
-        _listView?.SetFocus();
 
         // Copy the input DataTable into our master ListView source list
         _inputSource = LoadData();
@@ -84,10 +89,16 @@ internal sealed class OutGridViewWindow : Window
         _header?.SetHeaders(gridHeaders, _gridViewDetails.ListViewColumnWidths);
     }
 
-    /// <summary>
-    ///     Gets a value indicating whether the user cancelled the operation.
-    /// </summary>
-    public bool Cancelled { get; private set; }
+    protected override void OnIsRunningChanged(bool newIsRunning)
+    {
+        base.OnIsRunningChanged(newIsRunning);
+        if (!newIsRunning) return;
+
+        // We do this here, because _statusBar requires the Application to be running to
+        // access the driver information.
+        AddStatusBar();
+        _listView?.SetFocus();
+    }
 
     /// <summary>
     ///     Gets the original indexes of all marked rows.
@@ -95,12 +106,11 @@ internal sealed class OutGridViewWindow : Window
     /// <returns>A set of zero-based indexes from the original data table.</returns>
     public HashSet<int> GetSelectedIndexes()
     {
-        var selectedIndexes = new HashSet<int>();
-        if (Cancelled || _inputSource == null) return selectedIndexes;
+        if (_inputSource == null) return [];
 
-        foreach (var gvr in _inputSource.GridViewRowList)
-            if (gvr.IsMarked)
-                selectedIndexes.Add(gvr.OriginalIndex);
+        var selectedIndexes = new HashSet<int>();
+        foreach (var gvr in _inputSource.GridViewRowList.Where(gvr => gvr.IsMarked))
+            selectedIndexes.Add(gvr.OriginalIndex);
 
         return selectedIndexes;
     }
@@ -176,8 +186,7 @@ internal sealed class OutGridViewWindow : Window
         }
         catch (RegexParseException ex)
         {
-            if (_filterErrorView != null)
-                _filterErrorView.Text = ex.Message;
+            _filterErrorView?.Text = ex.Message;
         }
 
         _listViewSource?.MarkChanged += OnListViewSourceMarkChanged;
@@ -192,7 +201,7 @@ internal sealed class OutGridViewWindow : Window
                 _listView.SelectedItem = newIndex;
         }
 
-        if (_listView?.SelectedItem == -1 && _listView != null)
+        if (_listView?.SelectedItem == null && _listView is { Source.Count: > 0 })
             _listView.SelectedItem = 0;
     }
 
@@ -203,8 +212,7 @@ internal sealed class OutGridViewWindow : Window
     /// <param name="a">The event arguments containing the row that was marked or unmarked.</param>
     private void OnListViewSourceMarkChanged(object? s, GridViewDataSource.RowMarkedEventArgs a)
     {
-        if (_inputSource != null)
-            _inputSource.GridViewRowList[a.Row.OriginalIndex].IsMarked = a.Row.IsMarked;
+        _inputSource?.GridViewRowList[a.Row.OriginalIndex].IsMarked = a.Row.IsMarked;
     }
 
     #endregion
@@ -274,9 +282,10 @@ internal sealed class OutGridViewWindow : Window
     /// <summary>
     ///     Accepts the current selection and closes the window.
     /// </summary>
-    private static void Accept()
+    private void Accept()
     {
-        Application.RequestStop();
+        Result = GetSelectedIndexes();
+        App?.RequestStop();
     }
 
     /// <summary>
@@ -284,8 +293,8 @@ internal sealed class OutGridViewWindow : Window
     /// </summary>
     private void Close()
     {
-        Cancelled = true;
-        Application.RequestStop();
+        Result = null;
+        App?.RequestStop();
     }
 
     #endregion
@@ -323,7 +332,7 @@ internal sealed class OutGridViewWindow : Window
             Y = Pos.Top(_filterLabel) + 1,
             Width = Dim.Fill() - _filterLabel.Text.Length,
             Height = Dim.Auto(DimAutoStyle.Text),
-            SchemeName = "Error"
+            SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Error)
         };
 
         _filterField.TextChanged += (_, _) =>
@@ -344,7 +353,7 @@ internal sealed class OutGridViewWindow : Window
         Add(_filterLabel, _filterField, _filterErrorView);
 
         _filterField.Text = _applicationData.Filter ?? string.Empty;
-        _filterField.CursorPosition = _filterField.Text.Length;
+        _filterField.InsertionPoint = _filterField.Text.Length;
     }
 
     /// <summary>
@@ -356,7 +365,7 @@ internal sealed class OutGridViewWindow : Window
         {
             Source = _inputSource,
             X = MARGIN_LEFT,
-            Y = !_applicationData.MinUI ? Pos.Bottom(_filterErrorView!) : 1,
+            Y = _filterErrorView is not null ? Pos.Bottom(_filterErrorView) : 1,
             Width = Dim.Fill(),
             Height = Dim.Fill(1),
             AllowsMarking = _applicationData.OutputMode != OutputModeOption.None,
@@ -415,19 +424,19 @@ internal sealed class OutGridViewWindow : Window
         if (_applicationData.OutputMode != OutputModeOption.None)
             shortcuts.Add(new Shortcut(Key.Enter, "Accept", () =>
             {
-                if (Application.Top?.MostFocused == _listView)
+                if (MostFocused == _listView)
                 {
                     if (_applicationData.OutputMode == OutputModeOption.Single &&
                         _inputSource!.GridViewRowList.Find(i => i.IsMarked) == null)
-                        if (_listView!.SelectedItem >= 0 && _listView.SelectedItem < _listViewSource!.Count)
+                        if (_listView!.SelectedItem is not null && _listView.SelectedItem < _listViewSource!.Count)
                         {
-                            var item = _listViewSource.GridViewRowList[_listView.SelectedItem];
+                            var item = _listViewSource.GridViewRowList[_listView.SelectedItem.Value];
                             item.IsMarked = !item.IsMarked;
                         }
 
                     Accept();
                 }
-                else if (Application.Top?.MostFocused == _filterField)
+                else if (MostFocused == _filterField)
                 {
                     _listView!.SetFocus();
                 }
@@ -442,7 +451,7 @@ internal sealed class OutGridViewWindow : Window
                 Title = "A_ll Properties",
                 CheckedState = _applicationData.AllProperties ? CheckState.Checked : CheckState.UnChecked,
                 CanFocus = false,
-                HighlightStates = MouseState.None
+                MouseHighlightStates = MouseState.None
             },
             CanFocus = false,
             BindKeyToApplication = true
@@ -460,9 +469,13 @@ internal sealed class OutGridViewWindow : Window
         if (_applicationData.Verbose || _applicationData.Debug)
         {
             shortcuts.Add(new Shortcut(Key.Empty, $" v{_applicationData.ModuleVersion}", null));
-            shortcuts.Add(new Shortcut(Key.Empty,
-                $"{Application.Driver} v{FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location).ProductVersion}",
-                null));
+            FileVersionInfo tgFileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location);
+            string tgVersion = tgFileVersionInfo?.FileVersion ?? "no version found";
+            //if (tgFileVersionInfo is { IsPreRelease: true })
+            {
+                tgVersion = tgFileVersionInfo?.ProductVersion?[..tgFileVersionInfo.ProductVersion.IndexOf('+')] ?? tgVersion;
+            }
+            shortcuts.Add(new Shortcut(Key.Empty, $"{App?.Driver?.GetName()} v{tgVersion}", null));
         }
 
         _statusBar = new StatusBar(shortcuts);

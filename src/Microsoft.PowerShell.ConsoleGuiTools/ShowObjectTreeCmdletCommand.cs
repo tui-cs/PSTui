@@ -57,17 +57,15 @@ public class ShowObjectTreeCmdletCommand : PSCmdlet, IDisposable
     /// <summary>
     ///     Gets or sets a value indicating whether "minimum UI" mode will be enabled.
     /// </summary>
-    [Parameter(HelpMessage = "If specified no window frame, filter box, or status bar will be displayed in the GUI.")]
+    [Parameter(HelpMessage = "If specified no window frame, filter box, or status bar will be displayed in the TUI.")]
     public SwitchParameter MinUI { set; get; }
 
     /// <summary>
-    ///     Gets or sets a value indicating whether the Terminal.Gui System.Net.Console-based ConsoleDriver will be used
-    ///     instead of the
-    ///     default platform-specific (Windows or Curses) ConsoleDriver.
+    ///     Gets or sets the Terminal.Gui driver to use.
     /// </summary>
     [Parameter(HelpMessage =
-        "If specified the Terminal.Gui System.Net.Console-based ConsoleDriver (NetDriver) will be used.")]
-    public SwitchParameter UseNetDriver { set; get; }
+        "Forces the Terminal.Gui driver to use. Valid values are 'ansi', 'windows', or 'unix'.")]
+    public string? ForceDriver { set; get; }
 
     /// <summary>
     ///     Gets a value indicating whether the Debug switch is present.
@@ -147,7 +145,7 @@ public class ShowObjectTreeCmdletCommand : PSCmdlet, IDisposable
             Title = Title ?? "Show-ObjectTree",
             Filter = Filter,
             MinUI = MinUI,
-            UseNetDriver = UseNetDriver,
+            ForceDriver = ForceDriver,
             Debug = Debug,
             ModuleVersion = MyInvocation.MyCommand.Version.ToString()
         };

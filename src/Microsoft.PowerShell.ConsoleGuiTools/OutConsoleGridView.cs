@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using Microsoft.PowerShell.OutGridView.Models;
 using Terminal.Gui.App;
 
@@ -19,7 +20,6 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 /// </remarks>
 internal sealed class OutConsoleGridView : IDisposable
 {
-    private bool _cancelled;
     private ApplicationData? _applicationData;
 
     /// <summary>
@@ -35,21 +35,13 @@ internal sealed class OutConsoleGridView : IDisposable
     public HashSet<int> Run(ApplicationData applicationData)
     {
         _applicationData = applicationData;
-        if (_applicationData.UseNetDriver) Application.ForceDriver = "NetDriver";
 
-        var window = new OutGridViewWindow(_applicationData);
-        try
-        {
-            Application.Init();
-            Application.Run(window);
-            _cancelled = window.Cancelled;
-            return window.GetSelectedIndexes();
-        }
-        finally
-        {
-            window?.Dispose();
-            Application.Shutdown();
-        }
+        Terminal.Gui.Configuration.ConfigurationManager.Enable(Terminal.Gui.Configuration.ConfigLocations.All);
+
+        using OutGridViewWindow window = new(_applicationData);
+        using IApplication app = Application.Create().Init(driverName: _applicationData.ForceDriver);
+        HashSet<int>? selectedIndexes = app.Run(window) as HashSet<int>;
+        return selectedIndexes ?? [];
     }
 
     public void Dispose()

@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.PowerShell.OutGridView.Models;
 using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -23,11 +24,13 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 /// </summary>
 internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
 {
+    private const string FILTER_LABEL = "_Filter:";
+
     #region Fields
 
     private readonly TreeView<object> _tree;
     private readonly View _filterErrorView;
-    private Shortcut _selectedShortcut;
+    private Shortcut? _selectedShortcut;
     private readonly StatusBar _statusBar;
     private readonly ApplicationData _applicationData;
 
@@ -54,7 +57,6 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
         Title = _applicationData.Title ?? "Show-ObjectView";
         Width = Dim.Fill();
         Height = Dim.Fill(1);
-        Modal = false;
 
         if (_applicationData.MinUI)
         {
@@ -74,7 +76,7 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
 
         var filterLabel = new Label
         {
-            Text = "_Filter:",
+            Text = FILTER_LABEL,
             X = 1
         };
 
@@ -83,12 +85,12 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
             Text = _applicationData.Filter ?? string.Empty,
             X = Pos.Right(filterLabel) + 1,
             Width = Dim.Fill(1),
-            CursorPosition = (_applicationData.Filter ?? string.Empty).Length
+            InsertionPoint= (_applicationData.Filter ?? string.Empty).Length
         };
 
         _filterErrorView = new Label
         {
-            SchemeName = "Error",
+            SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Error),
             X = Pos.Right(filterLabel) + 1,
             Y = Pos.Top(filterLabel) + 1,
             Width = Dim.Width(filterTextField),
@@ -133,19 +135,29 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
         }
 
         Add(_tree);
+    }
+
+    protected override void OnIsRunningChanged(bool newIsRunning)
+    {
+        base.OnIsRunningChanged(newIsRunning);
+        if (!newIsRunning) return;
+
+        // We do this here, because _statusBar requires the Application to be running to
+        // access the driver information.
         Add(_statusBar);
+        _tree.SetFocus();
     }
 
     #endregion
 
-    #region Event Handlers
+        #region Event Handlers
 
-    /// <summary>
-    ///     Handles filter text changes and applies the regex filter.
-    /// </summary>
-    /// <param name="sender">The text field that triggered the event.</param>
-    /// <param name="e">The event arguments.</param>
-    /// <param name="regexFilter">The regex filter to update.</param>
+        /// <summary>
+        ///     Handles filter text changes and applies the regex filter.
+        /// </summary>
+        /// <param name="sender">The text field that triggered the event.</param>
+        /// <param name="e">The event arguments.</param>
+        /// <param name="regexFilter">The regex filter to update.</param>
     private void OnFilterTextChanged(object? sender, EventArgs e, RegexTreeViewTextFilter regexFilter)
     {
         var textField = sender as TextField;
@@ -178,10 +190,7 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
         if (selectedValue is CachedMemberResult cmr)
             selectedValue = cmr.Value;
 
-        if (selectedValue != null)
-            _selectedShortcut.Title = selectedValue.GetType().Name;
-        else
-            _selectedShortcut.Title = string.Empty;
+        _selectedShortcut?.Title = selectedValue != null ? selectedValue.GetType().Name : string.Empty;
 
         _statusBar.SetNeedsDraw();
     }
@@ -211,8 +220,7 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
     /// <returns><see langword="true" /> if the object can be expanded; otherwise, <see langword="false" />.</returns>
     public bool CanExpand(object toExpand)
     {
-        if (toExpand is CachedMemberResult p)
-            return IsBasicType(p.Value);
+        if (toExpand is CachedMemberResult p) return IsBasicType(p.Value);
 
         return IsBasicType(toExpand);
     }
@@ -226,22 +234,18 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
     {
         while (true)
         {
-            if (forObject == null || !CanExpand(forObject))
-                return [];
+            if (forObject == null || !CanExpand(forObject)) return [];
 
-            if (forObject is CachedMemberResult p)
+            switch (forObject)
             {
-                if (p.IsCollection)
+                case CachedMemberResult { IsCollection: true } p:
                     return p.Elements ?? Enumerable.Empty<object>();
-
-                forObject = p.Value;
-                continue;
-            }
-
-            if (forObject is CachedMemberResultElement e)
-            {
-                forObject = e.Value;
-                continue;
+                case CachedMemberResult p:
+                    forObject = p.Value;
+                    continue;
+                case CachedMemberResultElement e:
+                    forObject = e.Value;
+                    continue;
             }
 
             var children = new List<object>();
@@ -280,14 +284,13 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
     /// <returns>The display text for the object.</returns>
     private string? AspectGetter(object? toRender)
     {
-        if (toRender is Process p)
-            return p.ProcessName;
-        if (toRender is null)
-            return "Null";
-        if (toRender is FileSystemInfo fsi && !IsRootObject(fsi))
-            return fsi.Name;
-
-        return toRender.ToString();
+        return toRender switch
+        {
+            Process p => p.ProcessName,
+            null => "Null",
+            FileSystemInfo fsi when !IsRootObject(fsi) => fsi.Name,
+            _ => toRender.ToString()
+        };
     }
 
     /// <summary>
@@ -331,18 +334,24 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
         if (types.Length == 1)
             elementDescription = types[0].Name;
 
-        shortcuts.Add(new Shortcut(Key.Esc, "Close", () => Application.RequestStop()));
+        shortcuts.Add(new Shortcut(Key.Esc, "Close", () => App?.RequestStop()));
 
         var countShortcut = new Shortcut(Key.Empty, $"{rootObjects.Count} {elementDescription}", null);
         _selectedShortcut = new Shortcut(Key.Empty, string.Empty, null);
         shortcuts.Add(countShortcut);
         shortcuts.Add(_selectedShortcut);
 
-        if (_applicationData.Debug)
+        if (_applicationData.Verbose || _applicationData.Debug)
         {
             shortcuts.Add(new Shortcut(Key.Empty, $" v{_applicationData.ModuleVersion}", null));
+            FileVersionInfo tgFileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location);
+            string tgVersion = tgFileVersionInfo?.FileVersion ?? "no version found";
+            //if (tgFileVersionInfo is { IsPreRelease: true })
+            {
+                tgVersion = tgFileVersionInfo?.ProductVersion?[..tgFileVersionInfo.ProductVersion.IndexOf('+')] ?? tgVersion;
+            }
             shortcuts.Add(new Shortcut(Key.Empty,
-                $"{Application.Driver} v{FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location).ProductVersion}",
+                $"{App?.Driver?.GetName()} v{tgVersion}",
                 null));
         }
 

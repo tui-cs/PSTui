@@ -50,11 +50,11 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     ///     and if it should be possible to select multiple or single list items.
     /// </summary>
     [Parameter(HelpMessage =
-        "Determines whether a single item (Single), multiple items (Multiple; default), or no items (None) will be written to the pipeline. Also determines selection behavior in the GUI.")]
+        "Determines whether a single item (Single), multiple items (Multiple; default), or no items (None) will be written to the pipeline. Also determines selection behavior in the TUI.")]
     public OutputModeOption OutputMode { set; get; } = OutputModeOption.Multiple;
 
     /// <summary>
-    ///     Gets or sets the initial value for the filter in the GUI.
+    ///     Gets or sets the initial value for the filter in the TUI.
     /// </summary>
     [Parameter(HelpMessage =
         "Pre-populates the Filter edit box, allowing filtering to be specified on the command line. The filter uses regular expressions.")]
@@ -63,17 +63,15 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     /// <summary>
     ///     Gets or sets a value indicating whether "minimum UI" mode will be enabled.
     /// </summary>
-    [Parameter(HelpMessage = "If specified no window frame, filter box, or status bar will be displayed in the GUI.")]
+    [Parameter(HelpMessage = "If specified no window frame, filter box, or status bar will be displayed in the TUI.")]
     public SwitchParameter MinUI { set; get; }
 
     /// <summary>
-    ///     Gets or sets a value indicating whether the Terminal.Gui System.Net.Console-based Driver will be used
-    ///     instead of the
-    ///     default platform-specific (Windows or Curses) Driver.
+    ///     Gets or sets the Terminal.Gui driver to use.
     /// </summary>
     [Parameter(HelpMessage =
-        "If specified the Terminal.Gui System.Net.Console-based Driver (NetDriver) will be used.")]
-    public SwitchParameter UseNetDriver { set; get; }
+        "Forces the Terminal.Gui driver to use. Valid values are 'ansi', 'windows', or 'unix'.")]
+    public string? ForceDriver { set; get; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether all properties should be displayed instead of just the default display properties.
@@ -171,14 +169,14 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
             OutputMode = OutputMode,
             Filter = Filter,
             MinUI = MinUI,
-            UseNetDriver = UseNetDriver,
+            ForceDriver = ForceDriver,
             AllProperties = AllProperties,
             Verbose = Verbose,
             Debug = Debug,
             ModuleVersion = MyInvocation.MyCommand.Version.ToString()
         };
 
-        var selectedIndexes = _outConsoleGridView.Run(applicationData);
+        HashSet<int> selectedIndexes = _outConsoleGridView.Run(applicationData);
         foreach (var idx in selectedIndexes)
         {
             var selectedObject = _psObjects[idx];

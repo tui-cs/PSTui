@@ -65,9 +65,19 @@ internal sealed class GridViewDataSource : IListDataSource
     {
         listView.Move(col - start, line);
 
-        var driver = Application.Driver;
+        var driver = listView.App?.Driver;
         var row = GridViewRowList[item];
-        driver!.AddStr(row.DisplayString ?? string.Empty);
+        string displayString = row.DisplayString ?? string.Empty;
+        // Pad right of display string with spaces to fill width
+        if (displayString.Length < width)
+        {
+            displayString = displayString.PadRight(width);
+        }
+        else if (displayString.Length > width)
+        {
+            displayString = displayString[..width];
+        }
+        driver!.AddStr(displayString);
     }
 
     /// <summary>

@@ -36,9 +36,9 @@ public class ApplicationData
     public bool MinUI { get; set; }
 
     /// <summary>
-    ///     Gets or sets a value indicating whether to use the .NET driver for rendering.
+    ///     Gets or sets the driver to use for rendering.
     /// </summary>
-    public bool UseNetDriver { get; set; }
+    public string? ForceDriver { get; set; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether all properties should be displayed. If false, only default display

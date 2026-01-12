@@ -30,28 +30,19 @@ internal sealed class ShowObjectView : IDisposable
     ///         and runs it until the user closes the window. The method handles the complete application lifecycle
     ///         including initialization, execution, and shutdown.
     ///     </para>
-    ///     <para>
-    ///         If <see cref="ApplicationData.UseNetDriver" /> is set, the NetDriver will be used instead of the
-    ///         platform-specific driver (Windows Console API or Curses).
-    ///     </para>
     /// </remarks>
     internal static void Run(ApplicationData applicationData)
     {
-        if (applicationData.UseNetDriver)
-            Application.ForceDriver = "NetDriver";
+        Terminal.Gui.Configuration.ConfigurationManager.Enable(Terminal.Gui.Configuration.ConfigLocations.All);
 
-        ShowObjectTreeWindow? window = null;
-        try
-        {
-            Application.Init();
-            window = new ShowObjectTreeWindow(applicationData);
-            Application.Run(window);
-        }
-        finally
-        {
-            window?.Dispose();
-            Application.Shutdown();
-        }
+        if (!string.IsNullOrEmpty(applicationData.ForceDriver))
+            Application.ForceDriver = applicationData.ForceDriver;
+
+        using ShowObjectTreeWindow window = new(applicationData);
+        using IApplication app = Application.Create();
+        app.Init();
+        bool accepted = app.Run(window) is true;
+        Application.ForceDriver = string.Empty;
     }
 
     /// <summary>

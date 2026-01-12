@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <Import Project="..\..\ConsoleGuiTools.Common.props" />
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <LangVersion>preview</LangVersion>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -13,13 +13,14 @@
         - Add ';https://api.nuget.org/v3/index.json' to the end of the RestoreSources property group below
         - Uncomment the RestoreSources property group below
         -->
-        <!-- <RestoreSources>$(RestoreSources);../../../gui-cs/Terminal.Gui/Terminal.Gui/bin/Debug</RestoreSources> -->
+         <!--<RestoreSources>https://api.nuget.org/v3/index.json;$(RestoreSources);../../../gui-cs/Terminal.Gui/Terminal.Gui/bin/Debug</RestoreSources>--> 
     </PropertyGroup>
 
     <ItemGroup>
         <!-- Using local Terminal.Gui build for debugging -->
-        <ProjectReference Include="..\..\..\gui-cs\Terminal.Gui\Terminal.Gui\Terminal.Gui.csproj" />
-        <PackageReference Include="Microsoft.PowerShell.SDK" />
+        <!--<ProjectReference Include="..\..\..\gui-cs\Terminal.Gui\Terminal.Gui\Terminal.Gui.csproj" />-->
+        <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.4" />
+        <PackageReference Include="Terminal.Gui" Version="2.0.0-develop.4766" />
     </ItemGroup>
 
     <ItemGroup>
