@@ -8,13 +8,13 @@
     "OCGV -Filter": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
-      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -Debug -Filter com; Read-Host 'Press Enter to close terminal' ; exit }\"",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Select-Object ProcessName, Id, CPU | Out-ConsoleGridView -Debug -Filter com; Read-Host 'Press Enter to close terminal' ; exit }\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCGV": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
-      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-NetAdapter | Out-ConsoleGridView}\"",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-NetAdapter | Out-ConsoleGridView -Debug}\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCGV -MinUi": {

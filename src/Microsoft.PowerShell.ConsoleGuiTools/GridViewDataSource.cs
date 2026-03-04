@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
 
@@ -20,23 +21,17 @@ internal sealed class GridViewDataSource : IListDataSource
     /// </summary>
     public List<GridViewRow> GridViewRowList { get; set; }
 
-    /// <summary>
-    ///     Gets the number of rows in the data source.
-    /// </summary>
+    /// <inheritdoc/>
     public int Count => GridViewRowList.Count;
 
-    /// <inheritdoc />
-    public int MaxItemLength { get; }
+    /// <inheritdoc/>
+    public int MaxItemLength { get; set; }
 
-    /// <summary>
-    ///     Gets or sets a value indicating whether to suspend raising the <see cref="CollectionChanged" /> event.
-    /// </summary>
+    /// <inheritdoc/>
     public bool SuspendCollectionChangedEvent { get; set; }
 
 #pragma warning disable CS0067  
-    /// <summary>
-    ///     Occurs when the collection changes.
-    /// </summary>
+    /// <inheritdoc/>
     public event NotifyCollectionChangedEventHandler? CollectionChanged;
 #pragma warning restore CS0067
 
@@ -49,24 +44,21 @@ internal sealed class GridViewDataSource : IListDataSource
         GridViewRowList = itemList;
     }
 
-    /// <summary>
-    ///     Renders a specific item in the list view at the specified position.
-    /// </summary>
-    /// <param name="listView">The list view to render into.</param>
-    /// <param name="selected">A value indicating whether the item is selected.</param>
-    /// <param name="item">The index of the item to render.</param>
-    /// <param name="col">The column position to start rendering.</param>
-    /// <param name="line">The line position to render on.</param>
-    /// <param name="width">The width available for rendering.</param>
-    /// <param name="start">The starting position within the item's display string.</param>
-    public void Render(ListView listView, bool selected, int item, int col, int line, int width, int start = 0)
+    /// <inheritdoc/>
+    public void Render(ListView listView, bool selected, int item, int col, int line, int width, int viewportX)
     {
-        listView.Move(col - start, line);
+        GridViewRow? row = GridViewRowList[item];
+        string displayString = row?.DisplayString ?? string.Empty;
 
-        var driver = listView.App?.Driver;
-        var row = GridViewRowList[item];
-        string displayString = row.DisplayString ?? string.Empty;
-        // Pad right of display string with spaces to fill width
+        displayString = viewportX switch
+        {
+            // Truncate the start of the string to skip characters scrolled out of view
+            > 0 when displayString.Length > viewportX => displayString[viewportX..],
+            > 0 when displayString.Length <= viewportX => string.Empty,
+            _ => displayString
+        };
+
+        // Pad right of display string with spaces to fill width, or truncate if too long
         if (displayString.Length < width)
         {
             displayString = displayString.PadRight(width);
@@ -75,28 +67,17 @@ internal sealed class GridViewDataSource : IListDataSource
         {
             displayString = displayString[..width];
         }
-        driver!.AddStr(displayString);
+
+        listView.AddStr(displayString);
     }
 
-    /// <summary>
-    ///     Determines whether the specified item is marked.
-    /// </summary>
-    /// <param name="item">The index of the item to check.</param>
-    /// <returns><see langword="true" /> if the item is marked; otherwise, <see langword="false" />.</returns>
+    /// <inheritdoc/>
     public bool IsMarked(int item)
     {
-        if (item < 0 || item >= GridViewRowList.Count)
-        {
-            return false;
-        }
-        return GridViewRowList[item].IsMarked;
+        return item < GridViewRowList.Count && GridViewRowList[item].IsMarked;
     }
 
-    /// <summary>
-    ///     Sets the marked state of the specified item and raises the <see cref="MarkChanged" /> event.
-    /// </summary>
-    /// <param name="item">The index of the item to mark or unmark.</param>
-    /// <param name="value"><see langword="true" /> to mark the item; <see langword="false" /> to unmark it.</param>
+    /// <inheritdoc/>
     public void SetMark(int item, bool value)
     {
         var oldValue = GridViewRowList[item].IsMarked;

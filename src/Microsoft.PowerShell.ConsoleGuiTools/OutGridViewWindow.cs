@@ -1,12 +1,11 @@
-using Microsoft.PowerShell.OutGridView.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Microsoft.PowerShell.OutGridView.Models;
 using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
@@ -26,8 +25,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     private const int MARGIN_LEFT = 0;
     private const int CHECK_WIDTH = 2;
     private readonly ApplicationData _applicationData;
-    private readonly DataTable? _dataTable;
-    private readonly GridViewDetails _gridViewDetails;
+    private DataTable? _dataTable;
     private View? _filterErrorView;
     private TextField? _filterField;
 
@@ -35,7 +33,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     private Header? _header;
     private GridViewDataSource? _inputSource;
     private ListView? _listView;
-    private GridViewDataSource? _listViewSource;
+    private GridViewDataSource? _filteredSource;
     private int[]? _naturalColumnWidths;
     private StatusBar? _statusBar;
 
@@ -60,13 +58,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
                 break;
         }
 
-        _gridViewDetails = new GridViewDetails
-        {
-            ListViewOffset = _applicationData.OutputMode != OutputModeOption.None
-                ? MARGIN_LEFT + CHECK_WIDTH
-                : MARGIN_LEFT
-        };
-
         // Convert PSObjects to DataTable using TypeGetter which handles format data properly
         if (_applicationData.PSObjects is { Count: > 0 })
         {
@@ -78,15 +69,11 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             _dataTable = new DataTable([], []);
         }
 
-        AddListView();
-
-        // Copy the input DataTable into our master ListView source list
+        // Copy the input DataTable into our master source list
         _inputSource = LoadData();
-        ApplyFilter();
-        _gridViewDetails.UsableWidth = _naturalColumnWidths!.Sum();
-        var gridHeaders = _dataTable?.DataColumns.Select(c => c.Label).ToList();
 
-        _header?.SetHeaders(gridHeaders, _gridViewDetails.ListViewColumnWidths);
+        AddListView();
+        ApplyFilter();
     }
 
     protected override void OnIsRunningChanged(bool newIsRunning)
@@ -109,6 +96,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         if (_inputSource == null) return [];
 
         var selectedIndexes = new HashSet<int>();
+
         foreach (var gvr in _inputSource.GridViewRowList.Where(gvr => gvr.IsMarked))
             selectedIndexes.Add(gvr.OriginalIndex);
 
@@ -129,7 +117,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 
         // Calculate and cache natural column widths
         _naturalColumnWidths = CalculateNaturalColumnWidths(_dataTable?.DataColumns.Select(c => c.Label).ToList());
-        _gridViewDetails.ListViewColumnWidths = _naturalColumnWidths;
 
         for (var i = 0; i < _dataTable?.Data.Count; i++)
         {
@@ -147,16 +134,20 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
                     : string.Empty);
             }
 
-            var displayString = GridViewHelpers.GetPaddedString(valueList, 0, _gridViewDetails.ListViewColumnWidths);
-
             items.Add(new GridViewRow
             {
-                DisplayString = displayString,
+                DisplayString = GridViewHelpers.GetPaddedString(valueList, 0, _naturalColumnWidths),
                 OriginalIndex = i
             });
         }
 
-        return new GridViewDataSource(items);
+        // Anytime we load, we need to update the headers.
+        // Note, if ListView had a SourceChanged event, this could be done more automatically.
+        _header?.SetHeaders(_dataTable?.DataColumns.Select(c => c.Label).ToList(), _naturalColumnWidths);
+
+        var source = new GridViewDataSource(items);
+        source.MaxItemLength = _naturalColumnWidths!.Sum() + (_naturalColumnWidths!.Length - 1);
+        return source;
     }
 
     #endregion
@@ -170,33 +161,35 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     {
         GridViewRow? selectedItem = null;
 
-        if (_listViewSource != null)
+        if (_filteredSource != null)
         {
-            selectedItem = _listViewSource.GridViewRowList.ElementAtOrDefault(_listView?.SelectedItem ?? 0);
-            _listViewSource.MarkChanged -= OnListViewSourceMarkChanged;
-            _listViewSource = null;
+            selectedItem = _filteredSource.GridViewRowList.ElementAtOrDefault(_listView?.SelectedItem ?? 0);
+            _filteredSource.MarkChanged -= OnFilteredSourceMarkChanged;
+            _filteredSource = null;
         }
 
+        // TODO: this is probably not needed; it is here defensively
         _inputSource ??= LoadData();
 
         try
         {
-            _listViewSource = new GridViewDataSource(GridViewHelpers.FilterData(_inputSource.GridViewRowList,
+            _filteredSource = new GridViewDataSource(GridViewHelpers.FilterData(_inputSource.GridViewRowList,
                 _applicationData.Filter ?? string.Empty));
+            _filteredSource.MaxItemLength = _inputSource.MaxItemLength;
         }
         catch (RegexParseException ex)
         {
             _filterErrorView?.Text = ex.Message;
         }
 
-        _listViewSource?.MarkChanged += OnListViewSourceMarkChanged;
+        _filteredSource?.MarkChanged += OnFilteredSourceMarkChanged;
 
-        _listView?.Source = _listViewSource;
+        _listView?.Source = _filteredSource;
 
-        if (selectedItem is not null && _listViewSource != null)
+        if (selectedItem is { } && _filteredSource != null)
         {
             var newIndex =
-                _listViewSource.GridViewRowList.FindIndex(i => i.OriginalIndex == selectedItem.OriginalIndex);
+                _filteredSource.GridViewRowList.FindIndex(i => i.OriginalIndex == selectedItem.OriginalIndex);
             if (newIndex >= 0 && _listView != null)
                 _listView.SelectedItem = newIndex;
         }
@@ -210,7 +203,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     /// </summary>
     /// <param name="s">The event sender.</param>
     /// <param name="a">The event arguments containing the row that was marked or unmarked.</param>
-    private void OnListViewSourceMarkChanged(object? s, GridViewDataSource.RowMarkedEventArgs a)
+    private void OnFilteredSourceMarkChanged(object? s, GridViewDataSource.RowMarkedEventArgs a)
     {
         _inputSource?.GridViewRowList[a.Row.OriginalIndex].IsMarked = a.Row.IsMarked;
     }
@@ -238,26 +231,11 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             newDataTable = new DataTable([], []);
         }
 
-        // Update the data table reference
-        typeof(OutGridViewWindow)
-            .GetField("_dataTable", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .SetValue(this, newDataTable);
-
-        // Recalculate column widths
-        var gridHeaders = newDataTable.DataColumns.Select(c => c.Label).ToList();
-        _naturalColumnWidths = CalculateNaturalColumnWidths(gridHeaders);
-        _gridViewDetails.ListViewColumnWidths = _naturalColumnWidths;
-        _gridViewDetails.UsableWidth = _naturalColumnWidths.Sum();
-
-        // Update header
-        _header?.SetHeaders(gridHeaders, _gridViewDetails.ListViewColumnWidths);
+        _dataTable = newDataTable;
 
         // Reload and reapply filter
         _inputSource = LoadData();
         ApplyFilter();
-
-        // Update content size
-        _listView?.SetContentSize(new Size(_naturalColumnWidths.Sum(), _listView.GetContentSize().Height));
 
         // Update status bar to show current state
         UpdateStatusBar();
@@ -363,11 +341,12 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     {
         _listView = new ListView
         {
-            Source = _inputSource,
             X = MARGIN_LEFT,
-            Y = _filterErrorView is not null ? Pos.Bottom(_filterErrorView) : 1,
+            Y = _filterErrorView is { } ? Pos.Bottom(_filterErrorView) : 1,
             Width = Dim.Fill(),
             Height = Dim.Fill(1),
+            ShowMarks = _applicationData.OutputMode != OutputModeOption.None,
+            MarkMultiple = _applicationData.OutputMode == OutputModeOption.Multiple,
             ShowMarks = _applicationData.OutputMode != OutputModeOption.None,
             MarkMultiple = _applicationData.OutputMode == OutputModeOption.Multiple,
             SelectedItem = 0,
@@ -394,6 +373,8 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             _listView.Padding!.Thickness = _listView.Padding.Thickness with { Top = 1 };
             _listView!.Padding!.Add(_header);
             _listView.VerticalScrollBar.Y = 1;
+
+            _header?.SetHeaders(_dataTable?.DataColumns.Select(c => c.Label).ToList(), _naturalColumnWidths);
         }
     }
 
@@ -439,6 +420,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             {
                 Title = "A_ll Properties",
                 Value = _applicationData.AllProperties ? CheckState.Checked : CheckState.UnChecked,
+                Value = _applicationData.AllProperties ? CheckState.Checked : CheckState.UnChecked,
                 CanFocus = false,
                 MouseHighlightStates = MouseState.None
             },
@@ -458,11 +440,12 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         if (_applicationData.Verbose || _applicationData.Debug)
         {
             shortcuts.Add(new Shortcut(Key.Empty, $" v{_applicationData.ModuleVersion}", null));
-            FileVersionInfo tgFileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location);
-            string tgVersion = tgFileVersionInfo?.FileVersion ?? "no version found";
+            var tgFileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location);
+            var tgVersion = tgFileVersionInfo?.FileVersion ?? "no version found";
             //if (tgFileVersionInfo is { IsPreRelease: true })
             {
-                tgVersion = tgFileVersionInfo?.ProductVersion?[..tgFileVersionInfo.ProductVersion.IndexOf('+')] ?? tgVersion;
+                tgVersion = tgFileVersionInfo?.ProductVersion?[..tgFileVersionInfo.ProductVersion.IndexOf('+')] ??
+                            tgVersion;
             }
             shortcuts.Add(new Shortcut(Key.Empty, $"{App?.Driver?.GetName()} v{tgVersion}", null));
         }
@@ -474,12 +457,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     #endregion
 
     #region Layout Calculation
-
-    protected override void OnSubViewsLaidOut(LayoutEventArgs args)
-    {
-        base.OnSubViewsLaidOut(args);
-        _listView?.SetContentSize(new Size(_naturalColumnWidths!.Sum(), _listView.GetContentSize().Height));
-    }
 
     /// <summary>
     ///     Calculates the natural column widths needed to display all data without truncation.

@@ -2,8 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.PortableExecutable;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -11,7 +9,8 @@ using Terminal.Gui.Views;
 namespace Microsoft.PowerShell.ConsoleGuiTools;
 
 /// <summary>
-///     A specialized view for displaying grid column headers with individual subviews for each column.
+///     A specialized view for displaying grid column headers with individual subviews for each column. This is added to
+///     the top of the Padding of the ListView.
 /// </summary>
 internal sealed class Header : View
 {
@@ -28,21 +27,20 @@ internal sealed class Header : View
 
 
         // We are a subview of the ListView.Padding. 
-        if (SuperView is Padding padding)
-        {
-            padding.Parent?.ViewportChanged += ListViewOnViewportChanged;
-        }
+        if (SuperView is Padding padding) padding.Parent?.ViewportChanged += ListViewOnViewportChanged;
+
+        return;
 
         void ListViewOnViewportChanged(object? sender, DrawEventArgs e)
         {
-            if (sender is ListView listView) 
+            if (sender is ListView listView)
                 Viewport = Viewport with { X = listView.Viewport.X };
         }
     }
 
     protected override void OnSubViewLayout(LayoutEventArgs args)
     {
-        if (SuperView is Padding { Parent: ListView listView }) 
+        if (SuperView is Padding { Parent: ListView listView })
             SetContentSize(GetContentSize() with { Width = listView.GetContentSize().Width });
 
         base.OnSubViewLayout(args);
