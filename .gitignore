@@ -13,3 +13,4 @@ publish/
 *.suo
 *.sln.DotSettings
 Properties/launchSettings.json
+nuget.local.config
