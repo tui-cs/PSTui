@@ -348,14 +348,14 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             ShowMarks = _applicationData.OutputMode != OutputModeOption.None,
             MarkMultiple = _applicationData.OutputMode == OutputModeOption.Multiple,
             SelectedItem = 0,
-            VerticalScrollBar = { AutoShow = true },
-            HorizontalScrollBar = { AutoShow = true },
-            BorderStyle = LineStyle.Dotted
+            ViewportSettings = ViewportSettingsFlags.HasScrollBars
         };
 
         _listView.KeyBindings.Remove(Key.A.WithCtrl);
 
         if (!_applicationData.MinUI) AddHeader();
+
+        _listView.Accepted += (sender, args) => Accept();
 
         Add(_listView);
         return;
@@ -368,8 +368,8 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             };
 
 
-            _listView.Padding!.Thickness = _listView.Padding.Thickness with { Top = 1 };
-            _listView!.Padding!.Add(_header);
+            _listView.Padding.Thickness = _listView.Padding.Thickness with { Top = 1 };
+            _listView.Padding.GetOrCreateView().Add (_header);
             _listView.VerticalScrollBar.Y = 1;
 
             _header?.SetHeaders(_dataTable?.DataColumns.Select(c => c.Label).ToList(), _naturalColumnWidths);
@@ -404,19 +404,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         if (_applicationData.OutputMode != OutputModeOption.None)
             shortcuts.Add(new Shortcut(Key.Enter, "Accept", () =>
             {
-                if (MostFocused == _listView)
-                {
-                    if (_applicationData.OutputMode == OutputModeOption.Single &&
-                        _inputSource!.GridViewRowList.Find(i => i.IsMarked) == null)
-                        if (_listView!.SelectedItem is { } && _listView.SelectedItem < _filteredSource!.Count)
-                        {
-                            var item = _filteredSource.GridViewRowList[_listView.SelectedItem.Value];
-                            item.IsMarked = !item.IsMarked;
-                        }
-
-                    Accept();
-                }
-                else if (MostFocused == _filterField)
+                if (MostFocused == _filterField)
                 {
                     _listView!.SetFocus();
                 }

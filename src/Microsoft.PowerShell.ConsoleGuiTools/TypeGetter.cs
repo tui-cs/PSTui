@@ -321,7 +321,7 @@ public class TypeGetter
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception _)
             {
                 // If evaluation fails, use null
                 result = null;

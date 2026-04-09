@@ -1,49 +1,16 @@
-*.swp
-*.*~
-project.lock.json
-.DS_Store
-*.pyc
-nupkg/
-
-# Rider
-.idea
-
-# User-specific files
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-
-# Build results
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-x64/
-x86/
-build/
-bld/
-[Bb]in/
-[Oo]bj/
-[Oo]ut/
-msbuild.log
-msbuild.err
-msbuild.wrn
-
-publish/
-
-#Module build
 module/
+out/
+bin/
+obj/
+publish/
+*.sln
+*.slnx
 
-# Visual Studio 2015
-.vs/
-
-# ingore downloaded .NET
-.dotnet
-
-# Ignore package
-Microsoft.PowerShell.GraphicalTools.zip
-Microsoft.PowerShell.ConsoleGuiTools.zip
-
-# git artifacts
-*.orig
+# IDE support (keep locally, don't track)
+/.vs/
+/.vscode/
+*.user
+*.suo
+*.sln.DotSettings
+Properties/launchSettings.json
+nuget.local.config

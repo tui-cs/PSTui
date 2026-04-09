@@ -2,46 +2,45 @@
   "profiles": {
     "OCGV": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "executablePath": "pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -Debug }\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCGV -Filter": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "executablePath": "pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Select-Object ProcessName, Id, CPU | Out-ConsoleGridView -Debug -Filter com }\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCGV -MinUi": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "executablePath": "pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -MinUi }\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCGV -AllProperties": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "executablePath": "pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -AllProperties }\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCGV Select-Object": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "executablePath": "pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Select-Object ProcessName, Id, Handles, NPM, PM, WS, CPU | Out-ConsoleGridView }\"",
       "workingDirectory": "$(TargetDir)"
     },
     "gci | OCGV": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "executablePath": "pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; gci | Out-ConsoleGridView -OutputMode: Single }\"",
       "workingDirectory": "$(TargetDir)"
     },
     "SHOT": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "executablePath": "pwsh.exe",
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Show-ObjectTree }\"",
       "workingDirectory": "$(TargetDir)"
     }
   }
 }
-

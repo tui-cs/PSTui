@@ -1,43 +1,41 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<Import Project="..\..\ConsoleGuiTools.Common.props" />
-	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<LangVersion>preview</LangVersion>
-		<Nullable>enable</Nullable>
-	</PropertyGroup>
+    <Import Project="..\..\ConsoleGuiTools.Common.props" />
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>preview</LangVersion>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
 
-	<PropertyGroup>
-		<!-- To pull Terminal.Gui from a local nuget source:                        
+    <PropertyGroup>
+        <!-- To pull Terminal.Gui from a local nuget source:                        
         - Build Terminal.Gui locally in ../../gui-cs/Terminal.Gui          
         - Change Terminal.Gui Version= to "major.minor.patch-*"     
         - Add ';https://api.nuget.org/v3/index.json' to the end of the RestoreSources property group below
         - Uncomment the RestoreSources property group below
         -->
-		<!--<RestoreSources>https://api.nuget.org/v3/index.json;$(RestoreSources);../../../gui-cs/Terminal.Gui/Terminal.Gui/bin/Debug</RestoreSources>-->
-	</PropertyGroup>
+         <!--<RestoreSources>https://api.nuget.org/v3/index.json;$(RestoreSources);../../../gui-cs/Terminal.Gui/Terminal.Gui/bin/Debug</RestoreSources>--> 
+    </PropertyGroup>
 
-	<ItemGroup>
-		<!-- Using local Terminal.Gui build for debugging -->
-		<!--<ProjectReference Include="..\..\..\gui-cs\Terminal.Gui\Terminal.Gui\Terminal.Gui.csproj" />-->
-		<!--<PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.4" />-->
-		<PackageReference Include="Terminal.Gui" Version="2.0.0-develop.4947" />
-	</ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.PowerShell.SDK" />
+        <PackageReference Include="Terminal.Gui" />
+    </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="../Microsoft.PowerShell.OutGridView.Models/Microsoft.PowerShell.OutGridView.Models.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Microsoft.PowerShell.OutGridView.Models/Microsoft.PowerShell.OutGridView.Models.csproj" />
+    </ItemGroup>
 
-	<ItemGroup>
-		<None Update="Microsoft.PowerShell.ConsoleGuiTools.psd1" CopyToOutputDirectory="PreserveNewest" />
-	</ItemGroup>
+    <ItemGroup>
+        <None Update="Microsoft.PowerShell.ConsoleGuiTools.psd1" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 
-	<PropertyGroup>
-		<EnableNETAnalyzers>true</EnableNETAnalyzers>
-		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-		<AnalysisMode>Recommended</AnalysisMode>
-	</PropertyGroup>
+    <PropertyGroup>
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <AnalysisMode>Recommended</AnalysisMode>
+    </PropertyGroup>
 
-	<PropertyGroup>
-		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-	</PropertyGroup>
+    <PropertyGroup>
+      <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    </PropertyGroup>
 </Project>
