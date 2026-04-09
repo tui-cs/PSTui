@@ -368,8 +368,8 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             };
 
 
-            _listView.Padding!.Thickness = _listView.Padding.Thickness with { Top = 1 };
-            _listView!.Padding!.Add(_header);
+            _listView.Padding.Thickness = _listView.Padding.Thickness with { Top = 1 };
+            _listView.Padding.GetOrCreateView().Add (_header);
             _listView.VerticalScrollBar.Y = 1;
 
             _header?.SetHeaders(_dataTable?.DataColumns.Select(c => c.Label).ToList(), _naturalColumnWidths);

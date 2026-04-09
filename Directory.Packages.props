@@ -3,6 +3,6 @@
     <PackageVersion Include="Microsoft.PowerShell.SDK" Version="7.5.4" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="System.Management.Automation" Version="7.5.4" />
-    <PackageVersion Include="Terminal.Gui" Version="2.0.0-beta.81" />
+    <PackageVersion Include="Terminal.Gui" Version="2.0.0-beta.149" />
   </ItemGroup>
 </Project>

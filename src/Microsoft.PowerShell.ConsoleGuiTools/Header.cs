@@ -27,7 +27,7 @@ internal sealed class Header : View
 
 
         // We are a subview of the ListView.Padding. 
-        if (SuperView is Padding padding) padding.Parent?.ViewportChanged += ListViewOnViewportChanged;
+        if (SuperView is PaddingView padding) padding.Adornment?.Parent?.ViewportChanged += ListViewOnViewportChanged;
 
         return;
 
@@ -40,7 +40,7 @@ internal sealed class Header : View
 
     protected override void OnSubViewLayout(LayoutEventArgs args)
     {
-        if (SuperView is Padding { Parent: ListView listView })
+        if (SuperView is PaddingView { Adornment.Parent: ListView listView })
             SetContentSize(GetContentSize() with { Width = listView.GetContentSize().Width });
 
         base.OnSubViewLayout(args);
