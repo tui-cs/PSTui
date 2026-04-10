@@ -4,18 +4,18 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using Microsoft.PowerShell.OutGridView.Models;
 using Terminal.Gui.App;
-using Terminal.Gui.Configuration;
-using Terminal.Gui.Drawing;
-using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.Configuration;
+using Microsoft.PowerShell.OutGridView.Models;
 
 namespace Microsoft.PowerShell.ConsoleGuiTools;
 

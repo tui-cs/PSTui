@@ -122,7 +122,7 @@ Whatever was typed on the command line prior to hitting `F7` or `Shift-F7` will 
 ### Example 8: Output processes to a tree view
 
 ```PowerShell
-PS C:\> Get-Process | Show-ObjectTree
+Get-Process | Show-ObjectTree
 ```
 
 This command gets the processes running on the local computer and sends them to a tree view window.
@@ -131,9 +131,9 @@ Use right arrow when a row has a `+` symbol to expand the tree. Left arrow will 
 
 ## Development
 
-### 1. Install PowerShell 7.2+
+### 1. Install PowerShell 7.6+
 
-Install PowerShell 7.2+ with [these instructions](https://github.com/PowerShell/PowerShell#get-powershell).
+Install PowerShell 7.6+ with [these instructions](https://github.com/PowerShell/PowerShell#get-powershell).
 
 ### 2. Clone the GitHub repository
 
