@@ -122,7 +122,7 @@ Whatever was typed on the command line prior to hitting `F7` or `Shift-F7` will 
 ### Example 8: Output processes to a tree view
 
 ```PowerShell
-PS C:\> Get-Process | Show-ObjectTree
+Get-Process | Show-ObjectTree
 ```
 
 This command gets the processes running on the local computer and sends them to a tree view window.
