@@ -131,9 +131,9 @@ Use right arrow when a row has a `+` symbol to expand the tree. Left arrow will 
 
 ## Development
 
-### 1. Install PowerShell 7.2+
+### 1. Install PowerShell 7.6+
 
-Install PowerShell 7.2+ with [these instructions](https://github.com/PowerShell/PowerShell#get-powershell).
+Install PowerShell 7.6+ with [these instructions](https://github.com/PowerShell/PowerShell#get-powershell).
 
 ### 2. Clone the GitHub repository
 
