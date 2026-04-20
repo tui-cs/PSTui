@@ -38,9 +38,13 @@ internal sealed class OutConsoleGridView : IDisposable
 
         Terminal.Gui.Configuration.ConfigurationManager.Enable(Terminal.Gui.Configuration.ConfigLocations.All);
 
-        using OutGridViewWindow window = new(_applicationData);
-        using IApplication app = Application.Create().Init(driverName: _applicationData.ForceDriver);
+        OutGridViewWindow window = new(_applicationData);
+        IApplication app = Application.Create();
+        app.AppModel = _applicationData.FullScreen ? AppModel.FullScreen : AppModel.Inline;
+        app.Init(driverName: _applicationData.Driver);
         HashSet<int>? selectedIndexes = app.Run(window) as HashSet<int>;
+        window.Dispose();
+        app.Dispose();
         return selectedIndexes ?? [];
     }
 

@@ -47,7 +47,7 @@ public class OutGridViewWindowIntegrationTests
             OutputMode = outputMode,
             Filter = filter,
             MinUI = minUI,
-            ForceDriver = null
+            Driver = null
         };
     }
 

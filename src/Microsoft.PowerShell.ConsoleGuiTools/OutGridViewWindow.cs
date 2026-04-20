@@ -22,7 +22,6 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 {
     private const string FILTER_LABEL = "_Filter:";
-    private const int MARGIN_LEFT = 0;
     private const int CHECK_WIDTH = 2;
     private readonly ApplicationData _applicationData;
     private DataTable? _dataTable;
@@ -50,6 +49,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         _applicationData = applicationData;
         Title = _applicationData.Title ?? "Out-ConsoleGridView";
         SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Base);
+        BorderStyle = FrameView.DefaultBorderStyle;
 
         switch (_applicationData.MinUI)
         {
@@ -58,7 +58,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
                 if (!string.IsNullOrEmpty(_applicationData.Filter)) AddFilter();
                 break;
             case false:
-                BorderStyle = LineStyle.Rounded;
                 Border.Thickness = new Thickness(0, 2, 0, 0);
                 AddFilter();
                 break;
@@ -309,7 +308,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         _filterLabel = new Label
         {
             Text = FILTER_LABEL,
-            X = MARGIN_LEFT,
             Y = 0
         };
 
@@ -363,7 +361,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     {
         _listView = new ListView
         {
-            X = MARGIN_LEFT,
             Y = _filterErrorView is not null ? Pos.Bottom(_filterErrorView) : 0,
             Width = Dim.Fill(),
             ShowMarks = _applicationData.OutputMode != OutputModeOption.None,

@@ -41,7 +41,7 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     ///     Gets or sets the title of the Out-ConsoleGridView window.
     /// </summary>
     [Parameter(HelpMessage =
-        "Specifies the text that appears in the title bar of the Out-ConsoleGridView window. By default, the title bar displays the command that invokes Out-ConsoleGridView.")]
+        "Specifies the text that appears title bar of the Out-ConsoleGridView window. By default, the title displays Out-ConsoleGridView.")]
     [ValidateNotNullOrEmpty]
     public string? Title { get; set; }
 
@@ -63,15 +63,15 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     /// <summary>
     ///     Gets or sets a value indicating whether "minimum UI" mode will be enabled.
     /// </summary>
-    [Parameter(HelpMessage = "If specified no window frame, filter box, or status bar will be displayed in the TUI.")]
+    [Parameter(HelpMessage = "If specified no title or status bar will be displayed in the TUI. The filter will only be displayed if -Filter is specified.")]
     public SwitchParameter MinUI { set; get; }
 
     /// <summary>
     ///     Gets or sets the Terminal.Gui driver to use.
     /// </summary>
     [Parameter(HelpMessage =
-        "Forces the Terminal.Gui driver to use. Valid values are 'ansi', 'windows', or 'unix'.")]
-    public string? ForceDriver { set; get; }
+        "Sets Terminal.Gui driver to use. Valid values are 'ansi', 'windows', or 'unix'. The default is `ansi`")]
+    public string? Driver { set; get; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether the application should run in full-screen mode
@@ -170,7 +170,7 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
             OutputMode = OutputMode,
             Filter = Filter,
             MinUI = MinUI,
-            ForceDriver = ForceDriver,
+            Driver = Driver,
             FullScreen = FullScreen,
             Verbose = Verbose,
             Debug = Debug,

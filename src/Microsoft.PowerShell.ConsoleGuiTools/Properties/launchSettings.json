@@ -27,7 +27,7 @@
     "SHOT": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
-      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Show-ObjectTree }\"",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Show-ObjectTree -MinUI -filter con }\"",
       "workingDirectory": "$(TargetDir)"
     }
   }

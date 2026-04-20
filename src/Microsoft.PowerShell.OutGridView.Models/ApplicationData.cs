@@ -36,9 +36,9 @@ public class ApplicationData
     public bool MinUI { get; set; }
 
     /// <summary>
-    ///     Gets or sets the driver to use for rendering.
+    ///     Gets or sets the Terminal.Gui driver to use for rendering.
     /// </summary>
-    public string? ForceDriver { get; set; }
+    public string? Driver { get; set; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether verbose output is enabled.

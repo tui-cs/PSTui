@@ -56,7 +56,7 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
 
         Title = _applicationData.Title ?? "Out-ConsoleTableView";
         SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Base);
-        BorderStyle = Window.DefaultBorderStyle;
+        BorderStyle = FrameView.DefaultBorderStyle;
 
         if (_applicationData.MinUI)
         {

@@ -167,7 +167,7 @@ public class OutConsoleTableViewCmdletCommand : PSCmdlet, IDisposable
             OutputMode = OutputMode,
             Filter = Filter,
             MinUI = MinUI,
-            ForceDriver = ForceDriver,
+            Driver = ForceDriver,
             FullScreen = FullScreen,
             Verbose = Verbose,
             Debug = Debug,

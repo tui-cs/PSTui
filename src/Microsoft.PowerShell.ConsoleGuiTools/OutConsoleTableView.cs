@@ -42,7 +42,7 @@ internal sealed class OutConsoleTableView : System.IDisposable
         window.OnPipelineComplete(); // All data is available upfront
         IApplication app = Application.Create();
         app.AppModel = applicationData.FullScreen ? AppModel.FullScreen : AppModel.Inline;
-        app.Init(driverName: applicationData.ForceDriver);
+        app.Init(driverName: applicationData.Driver);
         HashSet<int>? selectedIndexes = app.Run(window) as HashSet<int>;
         window.Dispose();
         app.Dispose();

@@ -26,26 +26,19 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
 {
     private const string FILTER_LABEL = "_Filter:";
 
-    #region Fields
-
-    private readonly TreeView<object> _tree;
-    private readonly View _filterErrorView;
+    private readonly TreeView<object>? _tree;
     private Shortcut? _selectedShortcut;
-    private readonly StatusBar _statusBar;
+    private StatusBar? _statusBar;
     private readonly ApplicationData _applicationData;
 
-    #endregion
-
-    #region Properties
+    private View? _filterErrorView;
+    private TextField? _filterField;
+    private Label? _filterLabel;
 
     /// <summary>
     ///     Gets a value indicating whether this tree builder supports the CanExpand operation.
     /// </summary>
     public bool SupportsCanExpand => true;
-
-    #endregion
-
-    #region Constructor
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ShowObjectTreeWindow" /> class with the specified application data.
@@ -55,15 +48,20 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
     {
         _applicationData = applicationData;
         Title = _applicationData.Title ?? "Show-ObjectView";
-        Width = Dim.Fill();
-        Height = Dim.Fill(1);
 
-        if (_applicationData.MinUI)
+        SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Base);
+        BorderStyle = FrameView.DefaultBorderStyle;
+
+        switch (_applicationData.MinUI)
         {
-            BorderStyle = LineStyle.None;
-            Title = string.Empty;
-            X = -1;
-            Height = Dim.Fill();
+            case true:
+                BorderStyle = LineStyle.None;
+                if (!string.IsNullOrEmpty(_applicationData.Filter)) AddFilter();
+                break;
+            case false:
+                Border.Thickness = new Thickness(0, 2, 0, 0);
+                AddFilter();
+                break;
         }
 
         // Extract root objects from PSObjects
@@ -74,108 +72,180 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
             return p;
         }).ToList() ?? [];
 
-        var filterLabel = new Label
-        {
-            Text = FILTER_LABEL,
-            X = 1
-        };
-
-        var filterTextField = new TextField
-        {
-            Text = _applicationData.Filter ?? string.Empty,
-            X = Pos.Right(filterLabel) + 1,
-            Width = Dim.Fill(1),
-            InsertionPoint= (_applicationData.Filter ?? string.Empty).Length
-        };
-
-        _filterErrorView = new Label
-        {
-            SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Error),
-            X = Pos.Right(filterLabel) + 1,
-            Y = Pos.Top(filterLabel) + 1,
-            Width = Dim.Width(filterTextField),
-            Height = Dim.Auto(DimAutoStyle.Text)
-        };
-
         _tree = new TreeView<object>
         {
-            Y = Pos.Bottom(_filterErrorView),
+            Y = _filterErrorView is not null ? Pos.Bottom(_filterErrorView) : 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
             TreeBuilder = this,
-            AspectGetter = AspectGetter
+            Style = new TreeStyle() { HighlightModelTextOnly = true },
+            AspectGetter = AspectGetter!
         };
-        _tree.SelectionChanged += SelectionChanged;
 
-        var regexFilter = new RegexTreeViewTextFilter(this, _tree)
+        var regexFilter = new RegexTreeViewTextFilter(this, _tree!)
         {
             Text = _applicationData.Filter ?? string.Empty
         };
-        _tree.Filter = regexFilter;
+        _tree?.Filter = regexFilter;
 
         if (rootObjects.Count > 0)
-            _tree.AddObjects(rootObjects);
+            _tree?.AddObjects(rootObjects);
         else
-            _tree.AddObject("No Objects");
-
-        filterTextField.TextChanged += (sender, e) => OnFilterTextChanged(sender, e, regexFilter);
-
-        var shortcuts = CreateShortcuts(rootObjects);
-
-        _statusBar = new StatusBar(shortcuts)
-        {
-            Visible = !_applicationData.MinUI
-        };
-
-        if (!_applicationData.MinUI)
-        {
-            Add(filterLabel);
-            Add(filterTextField);
-            Add(_filterErrorView);
-        }
+            _tree?.AddObject("No Objects");
 
         Add(_tree);
     }
+
+    /// <summary>
+    ///     Adds the filter text field and error display to the window.
+    /// </summary>
+    private void AddFilter()
+    {
+        _filterLabel = new Label
+        {
+            Text = FILTER_LABEL
+        };
+
+        _filterField = new TextField
+        {
+            Text = _applicationData.Filter ?? string.Empty,
+            X = Pos.Right(_filterLabel) + 1,
+            Y = Pos.Top(_filterLabel),
+            CanFocus = true,
+            Width = Dim.Fill() - 1
+        };
+
+        _filterField.KeyBindings.Remove(Key.A.WithCtrl);
+        _filterField.KeyBindings.Remove(Key.D.WithCtrl);
+
+        _filterErrorView = new View
+        {
+            Text = string.Empty,
+            X = Pos.Right(_filterLabel) + 1,
+            Y = Pos.Top(_filterLabel) + 1,
+            Width = Dim.Fill() - _filterLabel.Text.Length,
+            Height = Dim.Auto(DimAutoStyle.Text),
+            SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Error)
+        };
+
+        _filterField.TextChanged += (_, _) =>
+        {
+            var filterText = _filterField.Text;
+            try
+            {
+                _filterErrorView?.Text = string.Empty;
+                _applicationData.Filter = filterText;
+                _filterField?.TextChanged += (sender, _) => OnFilterTextChanged(sender, ((RegexTreeViewTextFilter)_tree?.Filter));
+            }
+            catch (Exception ex)
+            {
+                _filterErrorView?.Text = ex.Message;
+            }
+        };
+
+        Add(_filterLabel, _filterField, _filterErrorView);
+
+        _filterField.Text = _applicationData.Filter ?? string.Empty;
+        _filterField.InsertionPoint = _filterField.Text.Length;
+    }
+
+
+    /// <summary>
+    ///     Adds the status bar with keyboard shortcuts to the window.
+    /// </summary>
+    private void AddStatusBar()
+    {
+        if (_tree is { Objects: not null })
+        {
+            var shortcuts = CreateShortcuts(_tree.Objects.ToList());
+
+            if (_applicationData.Verbose || _applicationData.Debug)
+            {
+                shortcuts.Add(new Shortcut(Key.Empty, $" v{_applicationData.ModuleVersion}", null));
+                var tgFileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location);
+                var tgVersion = tgFileVersionInfo.FileVersion ?? "no version found";
+                //if (tgFileVersionInfo is { IsPreRelease: true })
+                {
+                    tgVersion = tgFileVersionInfo.ProductVersion?[..tgFileVersionInfo.ProductVersion.IndexOf('+')] ??
+                                tgVersion;
+                }
+                shortcuts.Add(new Shortcut(Key.Empty, $"{App?.Driver?.GetName()} v{tgVersion}", null));
+            }
+
+            _statusBar = new StatusBar(shortcuts);
+        }
+
+        Add(_statusBar);
+    }
+
+    #region Event Handlers
+
+    private int _maxHeight;
+    private bool _laidOut;
 
     protected override void OnIsRunningChanged(bool newIsRunning)
     {
         base.OnIsRunningChanged(newIsRunning);
         if (!newIsRunning) return;
 
+        App?.LayoutAndDrawComplete += (_, _) =>
+        {
+            _maxHeight = !_laidOut ? Frame.Height : Math.Max(_maxHeight, Frame.Height);
+            _laidOut = true;
+        };
+
+        if (App?.AppModel == AppModel.Inline && Height.Has(out DimFill _) && _tree != null)
+        {
+            // If starting inline and height is Dim.Fill, change to Dim.Auto to avoid full screen
+            Height = Dim.Auto();
+
+            _tree.Height = Dim.Auto(
+                minimumContentDim:
+                Dim.Func(_ => Math.Max(
+                    _tree.GetSize().Height,
+                    _maxHeight - (_tree.FrameToScreen().Top + _tree.GetAdornmentsThickness().Vertical + (_statusBar?.Frame.Height ?? 0) + Border.Thickness.Bottom))),
+                maximumContentDim:
+                Dim.Func(_ =>
+                    App?.Driver?.Screen.Height -
+                    (_tree.FrameToScreen().Top + _tree.GetAdornmentsThickness().Vertical + (_statusBar?.Frame.Height ?? 0) + Border.Thickness.Bottom) ?? 0));
+        }
+
         // We do this here, because _statusBar requires the Application to be running to
         // access the driver information.
-        Add(_statusBar);
-        _tree.SetFocus();
+        if (!_applicationData.MinUI) AddStatusBar();
+
+        _tree?.SetFocus();
     }
 
-    #endregion
-
-        #region Event Handlers
-
-        /// <summary>
-        ///     Handles filter text changes and applies the regex filter.
-        /// </summary>
-        /// <param name="sender">The text field that triggered the event.</param>
-        /// <param name="e">The event arguments.</param>
-        /// <param name="regexFilter">The regex filter to update.</param>
-    private void OnFilterTextChanged(object? sender, EventArgs e, RegexTreeViewTextFilter regexFilter)
+    private int GetEpxandedRows()
     {
-        var textField = sender as TextField;
-        if (textField is null) return;
+        int count = 0;
+
+        return count;
+    }
+
+    /// <summary>
+    ///     Handles filter text changes and applies the regex filter.
+    /// </summary>
+    /// <param name="sender">The text field that triggered the event.</param>
+    /// <param name="regexFilter">The regex filter to update.</param>
+    private void OnFilterTextChanged(object? sender, RegexTreeViewTextFilter regexFilter)
+    {
+        if (sender is not TextField textField) return;
 
         // Test that the regex is valid before applying it
         try
         {
-            _ = new Regex(textField.Text ?? string.Empty, RegexOptions.IgnoreCase);
+            _ = new Regex(textField.Text, RegexOptions.IgnoreCase);
         }
         catch (RegexParseException ex)
         {
-            _filterErrorView.Text = ex.Message;
+            _filterErrorView?.Text = ex.Message;
             return;
         }
 
-        _filterErrorView.Text = string.Empty;
-        regexFilter.Text = textField.Text ?? string.Empty;
+        _filterErrorView?.Text = string.Empty;
+        regexFilter.Text = textField.Text;
     }
 
     /// <summary>
@@ -192,7 +262,7 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
 
         _selectedShortcut?.Title = selectedValue != null ? selectedValue.GetType().Name : string.Empty;
 
-        _statusBar.SetNeedsDraw();
+        _statusBar?.SetNeedsDraw();
     }
 
     #endregion
@@ -205,8 +275,8 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
     /// <param name="error">The error message to display.</param>
     internal void SetRegexError(string error)
     {
-        if (string.Equals(error, _filterErrorView.Text, StringComparison.Ordinal)) return;
-        _filterErrorView.Text = error;
+        if (string.Equals(error, _filterErrorView?.Text, StringComparison.Ordinal)) return;
+        _filterErrorView?.Text = error;
     }
 
     #endregion
@@ -298,7 +368,7 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
     /// </summary>
     /// <param name="o">The object to check.</param>
     /// <returns><see langword="true" /> if the object is a root object; otherwise, <see langword="false" />.</returns>
-    private bool IsRootObject(object o) => _tree.Objects.Contains(o);
+    private bool IsRootObject(object o) => _tree is { Objects: not null } && _tree.Objects.Contains(o);
 
     /// <summary>
     ///     Determines whether the specified value is a basic (non-primitive, non-string) type that can be expanded.
@@ -340,20 +410,6 @@ internal sealed class ShowObjectTreeWindow : Window, ITreeBuilder<object>
         _selectedShortcut = new Shortcut(Key.Empty, string.Empty, null);
         shortcuts.Add(countShortcut);
         shortcuts.Add(_selectedShortcut);
-
-        if (_applicationData.Verbose || _applicationData.Debug)
-        {
-            shortcuts.Add(new Shortcut(Key.Empty, $" v{_applicationData.ModuleVersion}", null));
-            FileVersionInfo tgFileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location);
-            string tgVersion = tgFileVersionInfo?.FileVersion ?? "no version found";
-            //if (tgFileVersionInfo is { IsPreRelease: true })
-            {
-                tgVersion = tgFileVersionInfo?.ProductVersion?[..tgFileVersionInfo.ProductVersion.IndexOf('+')] ?? tgVersion;
-            }
-            shortcuts.Add(new Shortcut(Key.Empty,
-                $"{App?.Driver?.GetName()} v{tgVersion}",
-                null));
-        }
 
         return shortcuts;
     }
