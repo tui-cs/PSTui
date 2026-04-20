@@ -17,7 +17,7 @@ Sends output to an interactive tree in the same console window.
 ## SYNTAX
 
 ```PowerShell
-Show-ObjectTree [-InputObject <PSObject>] [-Title <string>] [-Filter <string>] [-MinUi] [-UseNetDriver] [<CommonParameters>]
+Show-ObjectTree [-InputObject <PSObject>] [-Title <string>] [-Filter <string>] [-MinUi] [-Driver <string>] [-FullScreen] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -109,7 +109,37 @@ Accept wildcard characters: False
 ```
 
 ### -MinUi
-If specified no window frame, filter box, or status bar will be displayed in the **Show-ObjectTree** window.
+If specified no title or status bar will be displayed in the **Show-ObjectTree** window. The filter will only be displayed if `-Filter` is specified.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Driver
+Specifies the Terminal.Gui driver to use. Valid values are `ansi`, `windows`, or `unix`. The default is `ansi`.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: ansi
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -FullScreen
+If specified, the application runs in full-screen mode using the alternate screen buffer. By default, the application renders inline.
 
 ```yaml
 Type: SwitchParameter

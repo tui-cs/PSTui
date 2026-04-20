@@ -18,7 +18,7 @@ Sends output to an interactive table in the same console window.
 
 ```PowerShell
  Out-ConsoleGridView [-InputObject <psobject>] [-Title <string>] [-OutputMode {None | Single |
-    Multiple}] [-Filter <string>] [-MinUi] [<CommonParameters>]
+    Multiple}] [-Filter <string>] [-MinUi] [-Driver <string>] [-FullScreen] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -114,14 +114,13 @@ The example uses the `-Filter` parameter to filter for all proceses with a name 
 ### Example 7: Pass multiple items through Out-ConsoleGridView
 
 ```PowerShell
-Get-Process | Out-ConsoleGridView -PassThru | Export-Csv -Path .\ProcessLog.csv
+Get-Process | Out-ConsoleGridView -OutputMode Multiple | Export-Csv -Path .\ProcessLog.csv
 ```
 
 This command lets you select multiple processes from the **Out-ConsoleGridView** window.
 The processes that you select are passed to the **Export-Csv** command and written to the ProcessLog.csv file.
 
-The command uses the *PassThru* parameter of **Out-ConsoleGridView**, which lets you send multiple items down the pipeline.
-The *PassThru* parameter is equivalent to using the Multiple value of the *OutputMode* parameter.
+By default, `-OutputMode` is `Multiple`, which lets you send multiple items down the pipeline.
 
 ### Example 8: Use F7 as "Show Command History"
 
@@ -214,7 +213,37 @@ Accept wildcard characters: False
 ```
 
 ### -MinUi
-If specified no window frame, filter box, or status bar will be displayed in the **Out-ConsoleGridView** window.
+If specified no title or status bar will be displayed in the **Out-ConsoleGridView** window. The filter will only be displayed if `-Filter` is specified.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Driver
+Sets the Terminal.Gui driver to use. Valid values are `ansi`, `windows`, or `unix`. The default is `ansi`.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: ansi
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -FullScreen
+If specified, the application runs in full-screen mode using the alternate screen buffer. By default, the application renders inline.
 
 ```yaml
 Type: SwitchParameter

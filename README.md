@@ -203,7 +203,7 @@ to learn more.
 
 `ConsoleGuiTools` consists of 2 .NET Projects:
 
-* ConsoleGuiTools - Cmdlet implementation for Out-ConsoleGridView
+* ConsoleGuiTools - Cmdlet implementation for Out-ConsoleGridView and Show-ObjectTree
 * OutGridView.Models - Contains data contracts between the GUI & Cmdlet
 
 _Note:_ Previously, this repo included `Microsoft.PowerShell.GraphicalTools` which included the Avalonia-based `Out-GridView` (implemented in `.\Microsoft.PowerShell.GraphicalTools` and `.\OutGridView.Gui`). These components have been deprecated (see note above).
