@@ -36,15 +36,9 @@ public class ApplicationData
     public bool MinUI { get; set; }
 
     /// <summary>
-    ///     Gets or sets the driver to use for rendering.
+    ///     Gets or sets the Terminal.Gui driver to use for rendering.
     /// </summary>
-    public string? ForceDriver { get; set; }
-
-    /// <summary>
-    ///     Gets or sets a value indicating whether all properties should be displayed. If false, only default display
-    ///     properties are shown.
-    /// </summary>
-    public bool AllProperties { get; set; }
+    public string? Driver { get; set; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether verbose output is enabled.
@@ -55,6 +49,12 @@ public class ApplicationData
     ///     Gets or sets a value indicating whether debug output is enabled.
     /// </summary>
     public bool Debug { get; set; }
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether the application should run in full-screen mode
+    ///     using the alternate screen buffer. When false (default), the application renders inline.
+    /// </summary>
+    public bool FullScreen { get; set; }
 
     /// <summary>
     ///     Gets or sets the version of the module.

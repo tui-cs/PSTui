@@ -17,16 +17,14 @@ Sends output to an interactive tree in the same console window.
 ## SYNTAX
 
 ```PowerShell
-Show-ObjectTree [-InputObject <PSObject>] [-Title <string>] [-Filter <string>] [-MinUi] [-UseNetDriver] [<CommonParameters>]
+Show-ObjectTree [-InputObject <PSObject>] [-Title <string>] [-Filter <string>] [-MinUi] [-Driver <string>] [-FullScreen] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 
 The **Show-ObjectTree** cmdlet sends the output from a command to a tree view window where the output is displayed in an interactive tree.
 
-You can use the following features of the tree to examine your data:
-
-- Quick Filter. Use the Filter box at the top of the window to search the text in the tree. You can search for literals or multiple words. You can use the `-Filter` command to pre-populate the Filter box. The filter uses regular expressions.
+Use the Filter box at the top of the window to search the text in the tree including literals or multiple words. Use the `-Filter` parameter to pre-populate the Filter box. The filter uses regular expressions.
 
 For instructions for using these features, type `Get-Help Show-ObjectTree -Full` and see How to Use the Tree View Window Features in the Notes section.
 
@@ -35,7 +33,7 @@ For instructions for using these features, type `Get-Help Show-ObjectTree -Full`
 ### Example 1: Output processes to a tree view
 
 ```PowerShell
-PS C:\> Get-Process | Show-ObjectTree
+Get-Process | Show-ObjectTree
 ```
 
 This command gets the processes running on the local computer and sends them to a tree view window.
@@ -43,12 +41,13 @@ This command gets the processes running on the local computer and sends them to 
 ### Example 2: Save output to a variable, and then output a tree view
 
 ```PowerShell
-PS C:\> ($A = Get-ChildItem -Path $pshome -Recurse) | shot
+($A = Get-ChildItem -Path $pshome -Recurse) | shot
 ```
 
 This command saves its output in a variable and sends it to **Show-ObjectTree**.
 
 The command uses the Get-ChildItem cmdlet to get the files in the Windows PowerShell installation directory and its subdirectories.
+
 The path to the installation directory is saved in the $pshome automatic variable.
 
 The command uses the assignment operator (=) to save the output in the $A variable and the pipeline operator (|) to send the output to **Show-ObjectTree**.
@@ -76,7 +75,7 @@ Accept wildcard characters: False
 ### -InputObject
 Specifies that the cmdlet accepts input for **Show-ObjectTree**.
 
-When you use the **InputObject** parameter to send a collection of objects to **Show-ObjectTree**, **Show-ObjectTree** treats the collection as one collection object, and it displays one row that represents the collection.
+The **InputObject** parameter enables sending a collection of objects to **Show-ObjectTree**, **Show-ObjectTree** treats the collection as one collection object, and it displays one row that represents the collection.
 
 To display the each object in the collection, use a pipeline operator (|) to send objects to **Show-ObjectTree**.
 
@@ -110,7 +109,37 @@ Accept wildcard characters: False
 ```
 
 ### -MinUi
-If specified no window frame, filter box, or status bar will be displayed in the **Show-ObjectTree** window.
+If specified no title or status bar will be displayed in the **Show-ObjectTree** window. The filter will only be displayed if `-Filter` is specified.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Driver
+Specifies the Terminal.Gui driver to use. Valid values are `ansi`, `windows`, or `unix`. The default is `ansi`.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: ansi
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -FullScreen
+If specified, the application runs in full-screen mode using the alternate screen buffer. By default, the application renders inline.
 
 ```yaml
 Type: SwitchParameter
@@ -141,7 +170,7 @@ You can send any object to this cmdlet.
 
 ## NOTES
 
-* The command output that you send to **Show-ObjectTree** should not be formatted, such as by using the Format-Table or Format-Wide cmdlets. To select properties, use the Select-Object cmdlet.
+* The command output sent to **Show-ObjectTree** should not be formatted, such as by using the Format-Table or Format-Wide cmdlets. To select properties, use the Select-Object cmdlet.
 
 * Deserialized output from remote commands might not be formatted correctly in the tree view window.
 

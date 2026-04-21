@@ -18,12 +18,6 @@
       "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -MinUi }\"",
       "workingDirectory": "$(TargetDir)"
     },
-    "OCGV -AllProperties": {
-      "commandName": "Executable",
-      "executablePath": "pwsh.exe",
-      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Out-ConsoleGridView -AllProperties }\"",
-      "workingDirectory": "$(TargetDir)"
-    },
     "OCGV Select-Object": {
       "commandName": "Executable",
       "executablePath": "pwsh.exe",

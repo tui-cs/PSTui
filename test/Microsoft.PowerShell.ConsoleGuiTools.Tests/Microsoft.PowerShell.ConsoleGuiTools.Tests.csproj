@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\ConsoleGuiTools.Common.props" />
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>preview</LangVersion>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="coverlet.collector" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Microsoft.PowerShell.ConsoleGuiTools\Microsoft.PowerShell.ConsoleGuiTools.csproj" />
+        <ProjectReference Include="..\..\src\Microsoft.PowerShell.OutGridView.Models\Microsoft.PowerShell.OutGridView.Models.csproj" />
+    </ItemGroup>
+</Project>

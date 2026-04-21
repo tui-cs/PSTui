@@ -43,7 +43,7 @@ public class ShowObjectTreeCmdletCommand : PSCmdlet, IDisposable
     ///     Gets or sets the title of the Show-ObjectTree window.
     /// </summary>
     [Parameter(HelpMessage =
-        "Specifies the text that appears in the title bar of the Show-ObjectTree window. By default, the title bar displays the command that invokes Show-ObjectTree.")]
+        "Specifies the text that appears in the title. By default, the title bar displays Show-ObjectTree.")]
     [ValidateNotNullOrEmpty]
     public string? Title { get; set; }
 
@@ -57,15 +57,23 @@ public class ShowObjectTreeCmdletCommand : PSCmdlet, IDisposable
     /// <summary>
     ///     Gets or sets a value indicating whether "minimum UI" mode will be enabled.
     /// </summary>
-    [Parameter(HelpMessage = "If specified no window frame, filter box, or status bar will be displayed in the TUI.")]
+    [Parameter(HelpMessage = "If specified no title or status bar will be displayed in the TUI. The filter will only be displayed if -Filter is specified.")]
     public SwitchParameter MinUI { set; get; }
 
     /// <summary>
     ///     Gets or sets the Terminal.Gui driver to use.
     /// </summary>
     [Parameter(HelpMessage =
-        "Forces the Terminal.Gui driver to use. Valid values are 'ansi', 'windows', or 'unix'.")]
-    public string? ForceDriver { set; get; }
+        "Specifies the Terminal.Gui driver to use. Valid values are 'ansi', 'windows', or 'unix'. The default is `ansi`")]
+    public string? Driver { set; get; }
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether the application should run in full-screen mode
+    ///     using the alternate screen buffer. By default, the application renders inline.
+    /// </summary>
+    [Parameter(HelpMessage =
+        "If specified, the application runs in full-screen mode using the alternate screen buffer. By default, the application renders inline.")]
+    public SwitchParameter FullScreen { set; get; }
 
     /// <summary>
     ///     Gets a value indicating whether the Debug switch is present.
@@ -145,7 +153,8 @@ public class ShowObjectTreeCmdletCommand : PSCmdlet, IDisposable
             Title = Title ?? "Show-ObjectTree",
             Filter = Filter,
             MinUI = MinUI,
-            ForceDriver = ForceDriver,
+            Driver = Driver,
+            FullScreen = FullScreen,
             Debug = Debug,
             ModuleVersion = MyInvocation.MyCommand.Version.ToString()
         };

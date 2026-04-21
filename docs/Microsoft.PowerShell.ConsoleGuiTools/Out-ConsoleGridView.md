@@ -18,16 +18,14 @@ Sends output to an interactive table in the same console window.
 
 ```PowerShell
  Out-ConsoleGridView [-InputObject <psobject>] [-Title <string>] [-OutputMode {None | Single |
-    Multiple}] [-Filter <string>] [-MinUi] [<CommonParameters>]
+    Multiple}] [-Filter <string>] [-MinUi] [-Driver <string>] [-FullScreen] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
 
 The **Out-ConsoleGridView** cmdlet sends the output from a command to a grid view window where the output is displayed in an interactive table.
 
-You can use the following features of the table to examine your data:
-
-- Quick Filter. Use the Filter box at the top of the window to search the text in the table. You can search for text in a particular column, search for literals, and search for multiple words. You can use the `-Filter` command to pre-populate the Filter box. The filter uses regular expressions.
+Use the Filter box at the top of the window to search the text in the table. Search for text in a particular column, search for literals, and search for multiple words. Use the `-Filter` parameter to pre-populate the Filter box. The filter uses regular expressions.
 
 For instructions for using these features, type `Get-Help Out-ConsoleGridView -Full` and see How to Use the Grid View Window Features in the Notes section.
 
@@ -38,7 +36,7 @@ To send items from the interactive window down the pipeline, click to select the
 ### Example 1: Output processes to a grid view
 
 ```PowerShell
-PS C:\> Get-Process | Out-ConsoleGridView
+Get-Process | Out-ConsoleGridView
 ```
 
 This command gets the processes running on the local computer and sends them to a grid view window.
@@ -46,8 +44,8 @@ This command gets the processes running on the local computer and sends them to 
 ### Example 2: Use a variable to output processes to a grid view
 
 ```PowerShell
-PS C:\> $P = Get-Process
-PS C:\> $P | Out-ConsoleGridView -OutputMode Single
+$P = Get-Process
+$P | Out-ConsoleGridView -OutputMode Single
 ```
 
 This command also gets the processes running on the local computer and sends them to a grid view window.
@@ -61,7 +59,7 @@ By specifying `-OutputMode Single` the grid view window will be restricted to a 
 ### Example 3: Display a formatted table in a grid view
 
 ```PowerShell
-PS C:\> Get-Process | Select-Object -Property Name, WorkingSet, PeakWorkingSet | Sort-Object -Property WorkingSet -Descending | Out-ConsoleGridView
+Get-Process | Select-Object -Property Name, WorkingSet, PeakWorkingSet | Sort-Object -Property WorkingSet -Descending | Out-ConsoleGridView
 ```
 
 This command displays a formatted table in a grid view window.
@@ -80,7 +78,7 @@ You can now use the features of the grid view to search, sort, and filter the da
 ### Example 4: Save output to a variable, and then output a grid view
 
 ```PowerShell
-PS C:\> ($A = Get-ChildItem -Path $pshome -Recurse) | Out-ConsoleGridView
+($A = Get-ChildItem -Path $pshome -Recurse) | Out-ConsoleGridView
 ```
 
 This command saves its output in a variable and sends it to **Out-ConsoleGridView**.
@@ -96,7 +94,7 @@ As a result, the output from the Get-ChildItem command is saved in the $A variab
 ### Example 5: Output processes for a specified computer to a grid view
 
 ```PowerShell
-PS C:\> Get-Process -ComputerName "Server01" | ocgv -Title "Processes - Server01"
+Get-Process -ComputerName "Server01" | ocgv -Title "Processes - Server01"
 ```
 
 This command displays the processes that are running on the Server01 computer in a grid view window.
@@ -106,24 +104,23 @@ The command uses `ocgv`, which is the built-in alias for the **Out-ConsoleGridVi
 ### Example 6: Define a function to kill processes using a graphical chooser
 
 ```PowerShell
-PS C:\> function killp { Get-Process | Out-ConsoleGridView -OutputMode Single -Filter $args[0] | Stop-Process -Id {$_.Id} }
-PS C:\> killp note
+function killp { Get-Process | Out-ConsoleGridView -OutputMode Single -Filter $args[0] | Stop-Process -Id {$_.Id} }
+killp note
 ```
 This example shows defining a function named `killp` that shows a grid view of all running processes and allows the user to select one to kill it.
 
-The example uses the `-Filter` paramter to filter for all proceses with a name that includes `note` (thus highlighting `Notepad` if it were running. Selecting an item in the grid view and pressing `ENTER` will kill that process. 
+The example uses the `-Filter` parameter to filter for all proceses with a name that includes `note` (thus highlighting `Notepad` if it were running. Selecting an item in the grid view and pressing `ENTER` will kill that process. 
 
 ### Example 7: Pass multiple items through Out-ConsoleGridView
 
 ```PowerShell
-PS C:\> Get-Process | Out-ConsoleGridView -PassThru | Export-Csv -Path .\ProcessLog.csv
+Get-Process | Out-ConsoleGridView -OutputMode Multiple | Export-Csv -Path .\ProcessLog.csv
 ```
 
 This command lets you select multiple processes from the **Out-ConsoleGridView** window.
 The processes that you select are passed to the **Export-Csv** command and written to the ProcessLog.csv file.
 
-The command uses the *PassThru* parameter of **Out-ConsoleGridView**, which lets you send multiple items down the pipeline.
-The *PassThru* parameter is equivalent to using the Multiple value of the *OutputMode* parameter.
+By default, `-OutputMode` is `Multiple`, which lets you send multiple items down the pipeline.
 
 ### Example 8: Use F7 as "Show Command History"
 
@@ -216,7 +213,37 @@ Accept wildcard characters: False
 ```
 
 ### -MinUi
-If specified no window frame, filter box, or status bar will be displayed in the **Out-ConsoleGridView** window.
+If specified no title or status bar will be displayed in the **Out-ConsoleGridView** window. The filter will only be displayed if `-Filter` is specified.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Driver
+Sets the Terminal.Gui driver to use. Valid values are `ansi`, `windows`, or `unix`. The default is `ansi`.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: ansi
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -FullScreen
+If specified, the application runs in full-screen mode using the alternate screen buffer. By default, the application renders inline.
 
 ```yaml
 Type: SwitchParameter

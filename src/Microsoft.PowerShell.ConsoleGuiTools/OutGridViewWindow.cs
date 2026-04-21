@@ -22,18 +22,21 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 {
     private const string FILTER_LABEL = "_Filter:";
-    private const int MARGIN_LEFT = 0;
     private const int CHECK_WIDTH = 2;
     private readonly ApplicationData _applicationData;
     private DataTable? _dataTable;
+    private GridViewDataSource? _filteredSource;
     private View? _filterErrorView;
     private TextField? _filterField;
 
     private Label? _filterLabel;
     private Header? _header;
     private GridViewDataSource? _inputSource;
+
+    private bool _laidOut;
     private ListView? _listView;
-    private GridViewDataSource? _filteredSource;
+
+    private int _maxHeight;
     private int[]? _naturalColumnWidths;
     private StatusBar? _statusBar;
 
@@ -46,14 +49,16 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         _applicationData = applicationData;
         Title = _applicationData.Title ?? "Out-ConsoleGridView";
         SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Base);
-        BorderStyle = Window.DefaultBorderStyle;
+        BorderStyle = FrameView.DefaultBorderStyle;
 
         switch (_applicationData.MinUI)
         {
             case true:
                 BorderStyle = LineStyle.None;
+                if (!string.IsNullOrEmpty(_applicationData.Filter)) AddFilter();
                 break;
             case false:
+                Border.Thickness = new Thickness(0, 2, 0, 0);
                 AddFilter();
                 break;
         }
@@ -62,7 +67,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         if (_applicationData.PSObjects is { Count: > 0 })
         {
             var psObjects = _applicationData.PSObjects.Cast<PSObject>().ToList();
-            _dataTable = TypeGetter.CastObjectsToTableView(psObjects, _applicationData.AllProperties);
+            _dataTable = TypeGetter.CastObjectsToTableView(psObjects);
         }
         else
         {
@@ -81,9 +86,34 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         base.OnIsRunningChanged(newIsRunning);
         if (!newIsRunning) return;
 
+        App?.LayoutAndDrawComplete += (sender, args) =>
+        {
+            _maxHeight = !_laidOut ? Frame.Height : Math.Max(_maxHeight, Frame.Height);
+            _laidOut = true;
+        };
+
+        if (App?.AppModel == AppModel.Inline && Height.Has(out DimFill _))
+        {
+            // If starting inline and height is Dim.Fill, change to Dim.Auto to avoid full screen
+            Height = Dim.Auto();
+
+            _listView?.Height = Dim.Auto(
+                minimumContentDim:
+                Dim.Func(_ => Math.Max(
+                    _listView?.Source?.Count ?? 0,
+                    _maxHeight - ((_listView?.FrameToScreen().Top + _listView?.GetAdornmentsThickness().Vertical ??
+                                   0) + (_statusBar?.Frame.Height ?? 0) + Border.Thickness.Bottom))),
+                maximumContentDim:
+                Dim.Func(_ =>
+                    App?.Driver?.Screen.Height -
+                    ((_listView?.FrameToScreen().Top + _listView?.GetAdornmentsThickness().Vertical ??
+                     0) + (_statusBar?.Frame.Height ?? 0) + Border.Thickness.Bottom) ?? 0));
+        }
+
         // We do this here, because _statusBar requires the Application to be running to
         // access the driver information.
-        AddStatusBar();
+        if (!_applicationData.MinUI) AddStatusBar();
+
         _listView?.SetFocus();
     }
 
@@ -152,6 +182,42 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 
     #endregion
 
+    #region Layout Calculation
+
+    /// <summary>
+    ///     Calculates the natural column widths needed to display all data without truncation.
+    /// </summary>
+    /// <param name="gridHeaders">The column headers for the grid.</param>
+    /// <returns>An array of column widths where each width is the maximum needed for that column.</returns>
+    private int[] CalculateNaturalColumnWidths(List<string>? gridHeaders)
+    {
+        if (gridHeaders is null || _dataTable is null)
+            return [];
+
+        var columnWidths = new int[gridHeaders.Count];
+
+        // Start with header widths
+        for (var i = 0; i < gridHeaders.Count; i++)
+            columnWidths[i] = gridHeaders[i].Length;
+
+        // Expand to fit data
+        foreach (var row in _dataTable.Data)
+            for (var i = 0; i < _dataTable.DataColumns.Count; i++)
+            {
+                var columnKey = _dataTable.DataColumns[i].ToString();
+                if (row.Values.TryGetValue(columnKey, out var value))
+                {
+                    var len = value.DisplayValue.Length;
+                    if (len > columnWidths[i])
+                        columnWidths[i] = len;
+                }
+            }
+
+        return columnWidths;
+    }
+
+    #endregion
+
     #region Filtering
 
     /// <summary>
@@ -186,7 +252,7 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 
         _listView?.Source = _filteredSource;
 
-        if (selectedItem is { } && _filteredSource != null)
+        if (selectedItem is not null && _filteredSource != null)
         {
             var newIndex =
                 _filteredSource.GridViewRowList.FindIndex(i => i.OriginalIndex == selectedItem.OriginalIndex);
@@ -211,51 +277,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     #endregion
 
     #region User Actions
-
-    /// <summary>
-    ///     Reloads the data with the specified AllProperties setting.
-    /// </summary>
-    private void ReloadDataWithAllProperties(bool allProperties)
-    {
-        _applicationData.AllProperties = allProperties;
-
-        // Recreate the data table with the new property settings
-        DataTable newDataTable;
-        if (_applicationData.PSObjects is { Count: > 0 })
-        {
-            var psObjects = _applicationData.PSObjects.Cast<PSObject>().ToList();
-            newDataTable = TypeGetter.CastObjectsToTableView(psObjects, allProperties);
-        }
-        else
-        {
-            newDataTable = new DataTable([], []);
-        }
-
-        _dataTable = newDataTable;
-
-        // Reload and reapply filter
-        _inputSource = LoadData();
-        ApplyFilter();
-
-        // Update status bar to show current state
-        UpdateStatusBar();
-
-        // Force redraw
-        SetNeedsLayout();
-        SetNeedsDraw();
-    }
-
-    /// <summary>
-    ///     Updates the status bar to reflect the current AllProperties state.
-    /// </summary>
-    private void UpdateStatusBar()
-    {
-        if (_statusBar == null) return;
-
-        // Remove and recreate status bar to update the checkbox text
-        Remove(_statusBar);
-        AddStatusBar();
-    }
 
     /// <summary>
     ///     Accepts the current selection and closes the window.
@@ -287,7 +308,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         _filterLabel = new Label
         {
             Text = FILTER_LABEL,
-            X = MARGIN_LEFT,
             Y = 0
         };
 
@@ -341,19 +361,19 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
     {
         _listView = new ListView
         {
-            X = MARGIN_LEFT,
-            Y = _filterErrorView is { } ? Pos.Bottom(_filterErrorView) : 1,
+            Y = _filterErrorView is not null ? Pos.Bottom(_filterErrorView) : 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill(1),
             ShowMarks = _applicationData.OutputMode != OutputModeOption.None,
             MarkMultiple = _applicationData.OutputMode == OutputModeOption.Multiple,
             SelectedItem = 0,
             ViewportSettings = ViewportSettingsFlags.HasScrollBars
         };
 
+        _listView.Height = _statusBar is not null ? Dim.Fill(_statusBar) : Dim.Fill();
+
         _listView.KeyBindings.Remove(Key.A.WithCtrl);
 
-        if (!_applicationData.MinUI) AddHeader();
+        AddHeader();
 
         _listView.Accepted += (sender, args) => Accept();
 
@@ -368,8 +388,8 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             };
 
 
-            _listView.Padding!.Thickness = _listView.Padding.Thickness with { Top = 1 };
-            _listView!.Padding!.Add(_header);
+            _listView.Padding.Thickness = _listView.Padding.Thickness with { Top = 1 };
+            _listView.Padding.GetOrCreateView().Add(_header);
             _listView.VerticalScrollBar.Y = 1;
 
             _header?.SetHeaders(_dataTable?.DataColumns.Select(c => c.Label).ToList(), _naturalColumnWidths);
@@ -404,34 +424,10 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         if (_applicationData.OutputMode != OutputModeOption.None)
             shortcuts.Add(new Shortcut(Key.Enter, "Accept", () =>
             {
-                if (MostFocused == _filterField)
-                {
-                    _listView!.SetFocus();
-                }
+                if (MostFocused == _filterField) _listView!.SetFocus();
             }));
 
         shortcuts.Add(new Shortcut(Key.Esc, "Close", Close));
-
-        var allPropertiesShortcut = new Shortcut
-        {
-            CommandView = new CheckBox
-            {
-                Title = "A_ll Properties",
-                Value = _applicationData.AllProperties ? CheckState.Checked : CheckState.UnChecked,
-                CanFocus = false,
-                MouseHighlightStates = MouseState.None
-            },
-            CanFocus = false,
-            BindKeyToApplication = true
-        };
-
-        allPropertiesShortcut.Accepting += (_, e) =>
-        {
-            ReloadDataWithAllProperties(!_applicationData.AllProperties);
-            e.Handled = true;
-        };
-
-        shortcuts.Add(allPropertiesShortcut);
 
 
         if (_applicationData.Verbose || _applicationData.Debug)
@@ -449,42 +445,6 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 
         _statusBar = new StatusBar(shortcuts);
         Add(_statusBar);
-    }
-
-    #endregion
-
-    #region Layout Calculation
-
-    /// <summary>
-    ///     Calculates the natural column widths needed to display all data without truncation.
-    /// </summary>
-    /// <param name="gridHeaders">The column headers for the grid.</param>
-    /// <returns>An array of column widths where each width is the maximum needed for that column.</returns>
-    private int[] CalculateNaturalColumnWidths(List<string>? gridHeaders)
-    {
-        if (gridHeaders is null || _dataTable is null)
-            return [];
-
-        var columnWidths = new int[gridHeaders.Count];
-
-        // Start with header widths
-        for (var i = 0; i < gridHeaders.Count; i++)
-            columnWidths[i] = gridHeaders[i].Length;
-
-        // Expand to fit data
-        foreach (var row in _dataTable.Data)
-            for (var i = 0; i < _dataTable.DataColumns.Count; i++)
-            {
-                var columnKey = _dataTable.DataColumns[i].ToString();
-                if (row.Values.TryGetValue(columnKey, out var value))
-                {
-                    var len = value.DisplayValue.Length;
-                    if (len > columnWidths[i])
-                        columnWidths[i] = len;
-                }
-            }
-
-        return columnWidths;
     }
 
     #endregion

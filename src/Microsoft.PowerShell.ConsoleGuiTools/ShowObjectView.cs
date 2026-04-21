@@ -35,14 +35,14 @@ internal sealed class ShowObjectView : IDisposable
     {
         Terminal.Gui.Configuration.ConfigurationManager.Enable(Terminal.Gui.Configuration.ConfigLocations.All);
 
-        if (!string.IsNullOrEmpty(applicationData.ForceDriver))
-            Application.ForceDriver = applicationData.ForceDriver;
-
-        using ShowObjectTreeWindow window = new(applicationData);
-        using IApplication app = Application.Create();
-        app.Init();
-        bool accepted = app.Run(window) is true;
-        Application.ForceDriver = string.Empty;
+        ShowObjectTreeWindow window = new(applicationData);
+        IApplication app = Application.Create();
+        app.AppModel = applicationData.FullScreen ? AppModel.FullScreen : AppModel.Inline;
+        app.ForceInlinePosition = new(0, 10);
+        app.Init(driverName: applicationData.Driver);
+        app.Run(window);
+        window.Dispose();
+        app.Dispose();
     }
 
     /// <summary>

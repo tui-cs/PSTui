@@ -154,9 +154,8 @@ public class TypeGetter
     ///     Retrieves the column definitions for the specified PowerShell objects based on their format view definitions or properties.
     /// </summary>
     /// <param name="psObjects">The list of PowerShell objects to analyze.</param>
-    /// <param name="allProperties">If true, returns all properties instead of just the default display properties.</param>
     /// <returns>A distinct list of data table columns.</returns>
-    private List<DataTableColumn> GetDataColumnsForObject(List<PSObject> psObjects, bool allProperties = false)
+    private List<DataTableColumn> GetDataColumnsForObject(List<PSObject> psObjects)
     {
         var dataColumns = new List<DataTableColumn>();
 
@@ -167,75 +166,51 @@ public class TypeGetter
         List<string> labels;
         List<string> propertyAccessors;
 
-        // If allProperties is requested, skip format view and default display property logic
-        if (allProperties)
+        // Priority order:
+        // 1. Format view definition (from .ps1xml files) - what cmdlets like Get-NetAdapter use
+        // 2. DefaultDisplayPropertySet (TableContent) - used by custom objects
+        // 3. All properties (fallback)
+
+        var fvd = GetFormatViewDefinitionForObject(firstObject);
+        var defaultDisplayProps = GetDefaultDisplayPropertySet(firstObject);
+
+        if (fvd?.Control is TableControl tableControl)
         {
-            if (PSObjectIsPrimitive(firstObject))
+            // Use the table format definition (THIS IS WHAT GET-NETADAPTER USES)
+            var definedColumnLabels = tableControl.Headers.Select(h => h.Label).ToList();
+            var displayEntries = tableControl.Rows[0].Columns.Select(c => c.DisplayEntry).ToArray();
+            var propertyLabels = displayEntries.Select(de => de.Value).ToList();
+
+            // Use the TypeDefinition Label if available otherwise just use the property name as a label
+            labels = definedColumnLabels.Zip(propertyLabels, (definedLabel, propLabel) =>
             {
-                // Handle primitive types
-                labels = [firstObject.BaseObject.GetType().Name];
-                propertyAccessors = ["$_"];
-            }
-            else
-            {
-                // Return all properties - use simple property access format for performance
-                // Filter out PS* metadata properties which are often expensive to compute
-                var properties = firstObject.Properties
-                    .Where(p => p.IsGettable && !p.Name.StartsWith("PS"))
-                    .ToList();
-                
-                labels = properties.Select(p => p.Name).ToList();
-                propertyAccessors = properties.Select(p => $"$_.\"{p.Name}\"").ToList();
-            }
+                if (string.IsNullOrEmpty(definedLabel)) return propLabel;
+                return definedLabel;
+            }).ToList();
+
+            propertyAccessors = displayEntries.Select(de =>
+                de.ValueType == DisplayEntryValueType.Property
+                    ? $"$_.\"{de.Value}\""
+                    : de.Value  // ScriptBlock
+            ).ToList();
+        }
+        else if (defaultDisplayProps != null && defaultDisplayProps.Count > 0)
+        {
+            // Use the DefaultDisplayPropertySet (for custom objects)
+            labels = defaultDisplayProps;
+            propertyAccessors = defaultDisplayProps.Select(p => $"$_.\"{p}\"").ToList();
+        }
+        else if (PSObjectIsPrimitive(firstObject))
+        {
+            // Handle primitive types
+            labels = [firstObject.BaseObject.GetType().Name];
+            propertyAccessors = ["$_"];
         }
         else
         {
-            // Priority order:
-            // 1. Format view definition (from .ps1xml files) - what cmdlets like Get-NetAdapter use
-            // 2. DefaultDisplayPropertySet (TableContent) - used by custom objects
-            // 3. All properties (fallback)
-
-            var fvd = GetFormatViewDefinitionForObject(firstObject);
-            var defaultDisplayProps = GetDefaultDisplayPropertySet(firstObject);
-
-            if (fvd?.Control is TableControl tableControl)
-            {
-                // Use the table format definition (THIS IS WHAT GET-NETADAPTER USES)
-                var definedColumnLabels = tableControl.Headers.Select(h => h.Label).ToList();
-                var displayEntries = tableControl.Rows[0].Columns.Select(c => c.DisplayEntry).ToArray();
-                var propertyLabels = displayEntries.Select(de => de.Value).ToList();
-
-                // Use the TypeDefinition Label if available otherwise just use the property name as a label
-                labels = definedColumnLabels.Zip(propertyLabels, (definedLabel, propLabel) =>
-                {
-                    if (string.IsNullOrEmpty(definedLabel)) return propLabel;
-                    return definedLabel;
-                }).ToList();
-
-                propertyAccessors = displayEntries.Select(de =>
-                    de.ValueType == DisplayEntryValueType.Property
-                        ? $"$_.\"{de.Value}\""
-                        : de.Value  // ScriptBlock
-                ).ToList();
-            }
-            else if (defaultDisplayProps != null && defaultDisplayProps.Count > 0)
-            {
-                // Use the DefaultDisplayPropertySet (for custom objects)
-                labels = defaultDisplayProps;
-                propertyAccessors = defaultDisplayProps.Select(p => $"$_.\"{p}\"").ToList();
-            }
-            else if (PSObjectIsPrimitive(firstObject))
-            {
-                // Handle primitive types
-                labels = [firstObject.BaseObject.GetType().Name];
-                propertyAccessors = ["$_"];
-            }
-            else
-            {
-                // Fallback to all properties
-                labels = firstObject.Properties.Select(p => p.Name).ToList();
-                propertyAccessors = firstObject.Properties.Select(p => $"$_.\"{p.Name}\"").ToList();
-            }
+            // Fallback to all properties
+            labels = firstObject.Properties.Select(p => p.Name).ToList();
+            propertyAccessors = firstObject.Properties.Select(p => $"$_.\"{p.Name}\"").ToList();
         }
 
         for (int i = 0; i < labels.Count; i++)
@@ -383,8 +358,7 @@ public class TypeGetter
     ///     Converts a list of PowerShell objects into a data table structure suitable for display in the grid view.
     /// </summary>
     /// <param name="psObjects">The list of PowerShell objects to convert.</param>
-    /// <param name="allProperties">If true, includes all properties instead of just the default display properties.</param>
-    public static DataTable CastObjectsToTableView(List<PSObject> psObjects, bool allProperties = false)
+    public static DataTable CastObjectsToTableView(List<PSObject> psObjects)
     {
         if (psObjects.Count == 0)
         {
@@ -393,7 +367,7 @@ public class TypeGetter
 
         // Get the columns using format view definitions
         var typeGetter = new TypeGetter();
-        List<DataTableColumn> dataTableColumns = typeGetter.GetDataColumnsForObject(psObjects, allProperties).ToList();
+        List<DataTableColumn> dataTableColumns = typeGetter.GetDataColumnsForObject(psObjects).ToList();
 
         // Convert each object to a row
         var dataTableRows = new List<DataTableRow>();

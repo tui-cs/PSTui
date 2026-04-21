@@ -48,6 +48,10 @@ task Build {
     New-ExternalHelp -Path docs/Microsoft.PowerShell.ConsoleGuiTools -OutputPath module/en-US -Force
 }
 
+task Test {
+    Invoke-BuildExec { & dotnet test --configuration $Configuration }
+}
+
 task Package {
     New-Item -ItemType Directory -Force ./out | Out-Null
     if (-Not (Get-PSResourceRepository -Name ConsoleGuiTools -ErrorAction SilentlyContinue)) {
@@ -56,4 +60,4 @@ task Package {
     Publish-PSResource -Path ./module -Repository ConsoleGuiTools -Verbose
 }
 
-task . Clean, Build
+task . Clean, Build, Test

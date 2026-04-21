@@ -41,7 +41,7 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     ///     Gets or sets the title of the Out-ConsoleGridView window.
     /// </summary>
     [Parameter(HelpMessage =
-        "Specifies the text that appears in the title bar of the Out-ConsoleGridView window. By default, the title bar displays the command that invokes Out-ConsoleGridView.")]
+        "Specifies the text that appears title bar of the Out-ConsoleGridView window. By default, the title displays Out-ConsoleGridView.")]
     [ValidateNotNullOrEmpty]
     public string? Title { get; set; }
 
@@ -63,22 +63,23 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
     /// <summary>
     ///     Gets or sets a value indicating whether "minimum UI" mode will be enabled.
     /// </summary>
-    [Parameter(HelpMessage = "If specified no window frame, filter box, or status bar will be displayed in the TUI.")]
+    [Parameter(HelpMessage = "If specified no title or status bar will be displayed in the TUI. The filter will only be displayed if -Filter is specified.")]
     public SwitchParameter MinUI { set; get; }
 
     /// <summary>
     ///     Gets or sets the Terminal.Gui driver to use.
     /// </summary>
     [Parameter(HelpMessage =
-        "Forces the Terminal.Gui driver to use. Valid values are 'ansi', 'windows', or 'unix'.")]
-    public string? ForceDriver { set; get; }
+        "Sets Terminal.Gui driver to use. Valid values are 'ansi', 'windows', or 'unix'. The default is `ansi`")]
+    public string? Driver { set; get; }
 
     /// <summary>
-    ///     Gets or sets a value indicating whether all properties should be displayed instead of just the default display properties.
+    ///     Gets or sets a value indicating whether the application should run in full-screen mode
+    ///     using the alternate screen buffer. By default, the application renders inline.
     /// </summary>
     [Parameter(HelpMessage =
-        "If specified, all properties of the objects will be displayed instead of just the default display properties.")]
-    public SwitchParameter AllProperties { set; get; }
+        "If specified, the application runs in full-screen mode using the alternate screen buffer. By default, the application renders inline.")]
+    public SwitchParameter FullScreen { set; get; }
 
     /// <summary>
     ///     Gets a value indicating whether the Verbose switch is present.
@@ -169,14 +170,15 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
             OutputMode = OutputMode,
             Filter = Filter,
             MinUI = MinUI,
-            ForceDriver = ForceDriver,
-            AllProperties = AllProperties,
+            Driver = Driver,
+            FullScreen = FullScreen,
             Verbose = Verbose,
             Debug = Debug,
             ModuleVersion = MyInvocation.MyCommand.Version.ToString()
         };
 
         HashSet<int> selectedIndexes = _outConsoleGridView.Run(applicationData);
+
         foreach (var idx in selectedIndexes)
         {
             var selectedObject = _psObjects[idx];

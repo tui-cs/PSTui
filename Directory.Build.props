@@ -1,5 +1,8 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Use nuget.local.config if present (gitignored). Create it to override the
+         default nuget.config, e.g. to use nuget.org instead of the Azure DevOps feed. -->
+    <RestoreConfigFile Condition="Exists('$(MSBuildThisFileDirectory)nuget.local.config')">$(MSBuildThisFileDirectory)nuget.local.config</RestoreConfigFile>
   </PropertyGroup>
 </Project>

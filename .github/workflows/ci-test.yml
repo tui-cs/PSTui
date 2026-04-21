@@ -34,7 +34,7 @@ jobs:
 
       - name: Build and test
         shell: pwsh
-        run: Invoke-Build -Configuration Release Build, Package
+        run: Invoke-Build -Configuration Release Build, Test, Package
 
       - name: Upload module
         if: always()
