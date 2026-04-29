@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/Microsoft.PowerShell.ConsoleGuiTools/Microsoft.PowerShell.ConsoleGuiTools.csproj" />
+  <Project Path="src/Microsoft.PowerShell.OutGridView.Models/Microsoft.PowerShell.OutGridView.Models.csproj" />
+  <Project Path="test/Microsoft.PowerShell.ConsoleGuiTools.Tests/Microsoft.PowerShell.ConsoleGuiTools.Tests.csproj" />
+</Solution>

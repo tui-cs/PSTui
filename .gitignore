@@ -4,11 +4,9 @@ bin/
 obj/
 publish/
 *.sln
-*.slnx
 
 # IDE support (keep locally, don't track)
 /.vs/
-/.vscode/
 *.user
 *.suo
 *.sln.DotSettings
