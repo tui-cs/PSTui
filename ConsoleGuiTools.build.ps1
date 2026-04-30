@@ -49,7 +49,7 @@ task Build {
 }
 
 task Test {
-    Invoke-BuildExec { & dotnet test --configuration $Configuration }
+    Invoke-BuildExec { & dotnet test GraphicalTools.slnx --configuration $Configuration }
 }
 
 task Package {
