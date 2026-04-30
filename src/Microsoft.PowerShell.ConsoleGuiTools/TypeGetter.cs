@@ -157,11 +157,16 @@ public class TypeGetter
     /// <returns>A distinct list of data table columns.</returns>
     private List<DataTableColumn> GetDataColumnsForObject(List<PSObject> psObjects)
     {
+        if (psObjects.Count == 0) return [];
+        return GetDataColumnsForObject(psObjects[0]);
+    }
+
+    /// <summary>
+    ///     Determines the data columns from a single PSObject (using format view definitions, DefaultDisplayPropertySet, or all properties).
+    /// </summary>
+    internal List<DataTableColumn> GetDataColumnsForObject(PSObject firstObject)
+    {
         var dataColumns = new List<DataTableColumn>();
-
-        if (psObjects.Count == 0) return dataColumns;
-
-        var firstObject = psObjects[0];
 
         List<string> labels;
         List<string> propertyAccessors;
