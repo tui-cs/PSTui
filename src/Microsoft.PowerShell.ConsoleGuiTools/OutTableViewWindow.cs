@@ -135,9 +135,9 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
     {
         // Save the currently selected row's original index so we can restore position
         int? selectedOriginalIndex = null;
-        if (_filteredDataSource != null && _tableView is { SelectedRow: >= 0 } &&
-            _tableView.SelectedRow < _filteredDataSource.Rows)
-            selectedOriginalIndex = _filteredDataSource.GetOriginalObjectIndex(_tableView.SelectedRow);
+        if (_filteredDataSource != null && _tableView is { Value.Cursor.Y: >= 0 } &&
+            _tableView.Value.Cursor.Y < _filteredDataSource.Rows)
+            selectedOriginalIndex = _filteredDataSource.GetOriginalObjectIndex(_tableView.Value.Cursor.Y);
 
         try
         {
