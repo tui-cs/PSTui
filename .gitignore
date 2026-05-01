@@ -12,3 +12,4 @@ publish/
 *.sln.DotSettings
 Properties/launchSettings.json
 nuget.local.config
+GraphicalTools.Dev.slnx
