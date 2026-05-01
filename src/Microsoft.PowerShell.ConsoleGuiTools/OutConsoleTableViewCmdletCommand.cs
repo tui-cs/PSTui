@@ -160,7 +160,7 @@ public class OutConsoleTableViewCmdletCommand : PSCmdlet, IDisposable
             _initialized = true;
             var applicationData = new ApplicationData
             {
-                Title = Title ?? "Out-ConsoleTableView",
+                Title = Title,
                 OutputMode = OutputMode,
                 Filter = Filter,
                 MinUI = MinUI,
