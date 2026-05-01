@@ -33,7 +33,7 @@
     "OCTV": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
-      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Select-Object ProcessName, Id,\r\n   @{Name='CPU(s)'; Expression={[math]::Round($_.CPU,2)}},\r\n   @{Name='WorkingSet(MB)'; Expression={[math]::Round($_.WorkingSet64/1MB,2)}},\r\n   @{Name='Private(MB)'; Expression={[math]::Round($_.PrivateMemorySize64/1MB,2)}}\r\n    | Out-ConsoleTableView -Debug }\"",
+      "commandLineArgs": "-NoProfile -NoLogo -NoExit -Command \"& { Import-Module '$(TargetPath)'; Get-Process | Select-Object ProcessName, Id,\r\n   @{Name='CPU(s)'; Expression={[math]::Round($_.CPU,2)}},\r\n   @{Name='WorkingSet(MB)'; Expression={[math]::Round($_.WorkingSet64/1MB,2)}},\r\n   @{Name='Private(MB)'; Expression={[math]::Round($_.PrivateMemorySize64/1MB,2)}}\r\n    | Out-ConsoleTableView -Debug -Title \"processes\" -MinUI -Filter pass -OutputMode Single}\"",
       "workingDirectory": "$(TargetDir)"
     },
     "OCTV Slow": {

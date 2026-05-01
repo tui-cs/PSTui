@@ -53,7 +53,8 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
         switch (_applicationData.MinUI)
         {
             case true:
-                BorderStyle = LineStyle.None;
+                //BorderStyle = LineStyle.None;
+                Border.Thickness = new Thickness(0, string.IsNullOrEmpty(_applicationData.Title) ? 0 : 1, 0, 0);
                 if (!string.IsNullOrEmpty(_applicationData.Filter)) AddFilter();
                 break;
             case false:
@@ -307,7 +308,7 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
         _tableView = new TableView
         {
             X = 0,
-            Y = _filterErrorView is not null ? Pos.Bottom(_filterErrorView) : 1,
+            Y = _filterErrorView is not null ? Pos.Bottom(_filterErrorView) : 0,
             Width = Dim.Fill(),
             Height = _statusBar is not null ? Dim.Fill(_statusBar) : Dim.Fill(),
             FullRowSelect = true,
