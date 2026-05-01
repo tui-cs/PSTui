@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Management.Automation;
-using System.Management.Automation.Runspaces;
 using System.Text.RegularExpressions;
-using Microsoft.PowerShell.Commands;
 using Microsoft.PowerShell.OutGridView.Models;
 
 namespace Microsoft.PowerShell.ConsoleGuiTools;
@@ -16,12 +14,24 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 /// </summary>
 public class TypeGetter
 {
-    private readonly Dictionary<string, FormatViewDefinition?> _formatCache = new();
-
     /// <summary>
     ///     Regex pattern to match ANSI escape sequences.
     /// </summary>
     private static readonly Regex AnsiEscapeRegex = new(@"\x1b\[[0-9;]*m", RegexOptions.Compiled);
+
+    /// <summary>
+    ///     Types that are considered primitives to PowerShell but not to C#.
+    /// </summary>
+    private static readonly List<string> ADDITIONAL_PRIMITIVE_TYPES =
+    [
+        "System.String",
+        "System.Decimal",
+        "System.IntPtr",
+        "System.Security.SecureString",
+        "System.Numerics.BigInteger"
+    ];
+
+    private readonly Dictionary<string, FormatViewDefinition?> _formatCache = new();
 
     /// <summary>
     ///     Strips ANSI escape sequences from a string.
@@ -82,21 +92,18 @@ public class TypeGetter
         // PSObject has a TypeNames collection that includes PowerShell-specific type names
         // These are what the format system uses, not the .NET type name
         // For example, Get-NetAdapter returns objects with TypeName like "Microsoft.Management.Infrastructure.CimInstance#ROOT/StandardCimv2/MSFT_NetAdapter"
-        
+
         foreach (var typeName in obj.TypeNames)
         {
             if (_formatCache.TryGetValue(typeName, out var cached))
                 return cached;
 
             var fvd = GetFormatViewDefinitionForType(typeName);
-            if (fvd != null)
-            {
-                return fvd;
-            }
+            if (fvd != null) return fvd;
         }
 
         // Fallback to base object type name
-        string? baseTypeName = obj.BaseObject.GetType().FullName;
+        var baseTypeName = obj.BaseObject.GetType().FullName;
         if (baseTypeName is not null)
         {
             if (_formatCache.TryGetValue(baseTypeName, out var cached))
@@ -120,15 +127,13 @@ public class TypeGetter
         {
             // For CIM instances and other objects, PowerShell adds PSStandardMembers
             // through the Extended Type System (ETS), not always as instance members
-            
+
             // First check instance members (for objects with runtime-added members)
             var standardMembers = obj.Members["PSStandardMembers"]?.Value as PSMemberSet;
             var defaultDisplayProperty = standardMembers?.Members["DefaultDisplayPropertySet"]?.Value as PSPropertySet;
 
-            if (defaultDisplayProperty?.ReferencedPropertyNames != null && defaultDisplayProperty.ReferencedPropertyNames.Count > 0)
-            {
+            if (defaultDisplayProperty?.ReferencedPropertyNames is { Count: > 0 })
                 return defaultDisplayProperty.ReferencedPropertyNames.ToList();
-            }
 
             // Second, check PSObject.Properties for DefaultDisplayPropertySet
             // Some objects have this defined through type adapters
@@ -136,10 +141,8 @@ public class TypeGetter
             if (psStandardMembers?.Value is PSMemberSet memberSet)
             {
                 var displayPropSet = memberSet.Members["DefaultDisplayPropertySet"] as PSPropertySet;
-                if (displayPropSet?.ReferencedPropertyNames != null && displayPropSet.ReferencedPropertyNames.Count > 0)
-                {
+                if (displayPropSet?.ReferencedPropertyNames is { Count: > 0 })
                     return displayPropSet.ReferencedPropertyNames.ToList();
-                }
             }
         }
         catch
@@ -151,7 +154,8 @@ public class TypeGetter
     }
 
     /// <summary>
-    ///     Retrieves the column definitions for the specified PowerShell objects based on their format view definitions or properties.
+    ///     Retrieves the column definitions for the specified PowerShell objects based on their format view definitions or
+    ///     properties.
     /// </summary>
     /// <param name="psObjects">The list of PowerShell objects to analyze.</param>
     /// <returns>A distinct list of data table columns.</returns>
@@ -162,7 +166,8 @@ public class TypeGetter
     }
 
     /// <summary>
-    ///     Determines the data columns from a single PSObject (using format view definitions, DefaultDisplayPropertySet, or all properties).
+    ///     Determines the data columns from a single PSObject (using format view definitions, DefaultDisplayPropertySet, or
+    ///     all properties).
     /// </summary>
     internal List<DataTableColumn> GetDataColumnsForObject(PSObject firstObject)
     {
@@ -194,18 +199,18 @@ public class TypeGetter
             }).ToList();
 
             propertyAccessors = displayEntries.Select(de =>
-                de.ValueType == DisplayEntryValueType.Property
-                    ? $"$_.\"{de.Value}\""
-                    : de.Value  // ScriptBlock
+                    de.ValueType == DisplayEntryValueType.Property
+                        ? $"$_.\"{de.Value}\""
+                        : de.Value // ScriptBlock
             ).ToList();
         }
-        else if (defaultDisplayProps != null && defaultDisplayProps.Count > 0)
+        else if (defaultDisplayProps is { Count: > 0 })
         {
             // Use the DefaultDisplayPropertySet (for custom objects)
             labels = defaultDisplayProps;
             propertyAccessors = defaultDisplayProps.Select(p => $"$_.\"{p}\"").ToList();
         }
-        else if (PSObjectIsPrimitive(firstObject))
+        else if (PsObjectIsPrimitive(firstObject))
         {
             // Handle primitive types
             labels = [firstObject.BaseObject.GetType().Name];
@@ -218,7 +223,7 @@ public class TypeGetter
             propertyAccessors = firstObject.Properties.Select(p => $"$_.\"{p.Name}\"").ToList();
         }
 
-        for (int i = 0; i < labels.Count; i++)
+        for (var i = 0; i < labels.Count; i++)
         {
             var column = new DataTableColumn(labels[i], propertyAccessors[i]);
             dataColumns.Add(column);
@@ -228,21 +233,9 @@ public class TypeGetter
     }
 
     /// <summary>
-    ///     Types that are considered primitives to PowerShell but not to C#.
-    /// </summary>
-    private static readonly List<string> ADDITIONAL_PRIMITIVE_TYPES =
-    [
-        "System.String",
-        "System.Decimal",
-        "System.IntPtr",
-        "System.Security.SecureString",
-        "System.Numerics.BigInteger"
-    ];
-
-    /// <summary>
     ///     Determines whether the specified PowerShell object represents a primitive type.
     /// </summary>
-    private static bool PSObjectIsPrimitive(PSObject ps)
+    private static bool PsObjectIsPrimitive(PSObject ps)
     {
         var psBaseType = ps.BaseObject.GetType();
         return psBaseType.IsPrimitive || psBaseType.IsEnum ||
@@ -252,13 +245,14 @@ public class TypeGetter
     /// <summary>
     ///     Converts a PowerShell object to a data table row using PSPropertyExpression to evaluate property accessors.
     /// </summary>
-    public static DataTableRow CastObjectToDataTableRow(PSObject psObject, List<DataTableColumn> dataTableColumns, int objectIndex)
+    public static DataTableRow CastObjectToDataTableRow(PSObject psObject, List<DataTableColumn> dataTableColumns,
+        int objectIndex)
     {
         var valuePairs = new Dictionary<string, IValue>();
 
         foreach (var column in dataTableColumns)
         {
-            object? result = null;
+            object? result;
 
             try
             {
@@ -266,7 +260,9 @@ public class TypeGetter
                 // For simple properties, we need to extract just the property name
                 var accessor = column.PropertyScriptAccessor;
 
+#pragma warning disable CA1310
                 if (accessor.StartsWith("$_.\"") && accessor.EndsWith("\""))
+#pragma warning restore CA1310
                 {
                     // Extract property name from "$_."PropertyName"" format
                     var propertyName = accessor.Substring(4, accessor.Length - 5);
@@ -274,10 +270,7 @@ public class TypeGetter
                     result = property?.Value;
 
                     // Unwrap PSObject if needed to get the base value
-                    if (result is PSObject psObjResult)
-                    {
-                        result = psObjResult.BaseObject;
-                    }
+                    if (result is PSObject psObjResult) result = psObjResult.BaseObject;
                 }
                 else if (accessor == "$_")
                 {
@@ -288,17 +281,11 @@ public class TypeGetter
                 {
                     // It's a script block - create and invoke it
                     var scriptBlock = ScriptBlock.Create(accessor);
-                    var results = scriptBlock.InvokeWithContext(null, new List<PSVariable>
-                    {
-                        new PSVariable("_", psObject)
-                    });
+                    var results = scriptBlock.InvokeWithContext(null, [new("_", psObject)]);
                     result = results.FirstOrDefault();
 
                     // Unwrap PSObject if needed
-                    if (result is PSObject psScriptResult)
-                    {
-                        result = psScriptResult.BaseObject;
-                    }
+                    if (result is PSObject psScriptResult) result = psScriptResult.BaseObject;
                 }
             }
             catch (Exception _)
@@ -312,7 +299,8 @@ public class TypeGetter
             displayValue = StripAnsiCodes(displayValue);
 
             // Determine if this is a numeric value for sorting
-            var isNumeric = result is decimal or int or long or short or byte or double or float or uint or ulong or ushort or sbyte;
+            var isNumeric = result is decimal or int or long or short or byte or double or float or uint or ulong
+                or ushort or sbyte;
 
             var columnKey = column.ToString();
 
@@ -350,13 +338,9 @@ public class TypeGetter
 
         // If every value in a column could be a decimal, assume that it is supposed to be a decimal
         foreach (var dataRow in dataRows)
-        {
-            foreach (var dataColumn in dataTableColumns)
-            {
-                if (dataRow[dataColumn.ToString()] is not DecimalValue)
-                    dataColumn.StringType = typeof(string).FullName;
-            }
-        }
+        foreach (var dataColumn in dataTableColumns)
+            if (dataRow[dataColumn.ToString()] is not DecimalValue)
+                dataColumn.StringType = typeof(string).FullName;
     }
 
     /// <summary>
@@ -365,14 +349,11 @@ public class TypeGetter
     /// <param name="psObjects">The list of PowerShell objects to convert.</param>
     public static DataTable CastObjectsToTableView(List<PSObject> psObjects)
     {
-        if (psObjects.Count == 0)
-        {
-            return new DataTable([], []);
-        }
+        if (psObjects.Count == 0) return new DataTable([], []);
 
         // Get the columns using format view definitions
         var typeGetter = new TypeGetter();
-        List<DataTableColumn> dataTableColumns = typeGetter.GetDataColumnsForObject(psObjects).ToList();
+        var dataTableColumns = typeGetter.GetDataColumnsForObject(psObjects).ToList();
 
         // Convert each object to a row
         var dataTableRows = new List<DataTableRow>();

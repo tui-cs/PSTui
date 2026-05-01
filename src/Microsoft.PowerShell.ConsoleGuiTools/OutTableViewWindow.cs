@@ -117,7 +117,21 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
     /// </summary>
     public void OnDataChanged()
     {
-        ApplyFilter();
+        if (string.IsNullOrEmpty(_applicationData.Filter))
+        {
+            // No filter active — just point the table at the master source directly (no copy)
+            if (_filteredDataSource != _masterDataSource)
+            {
+                _filteredDataSource = _masterDataSource;
+                _tableView!.Table = _filteredDataSource;
+            }
+            _tableView?.Update();
+        }
+        else
+        {
+            ApplyFilter();
+        }
+
         if (_isLoading)
             _rowsShortcut.Text = $"{_masterDataSource.Rows} rows";
     }
@@ -214,7 +228,7 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
             {
                 for (var col = 0; col < _filteredDataSource.Columns; col++)
                 {
-                    var cellValue = _filteredDataSource[row, col]?.ToString() ?? string.Empty;
+                    var cellValue = _filteredDataSource[row, col].ToString() ?? string.Empty;
                     if (regex.IsMatch(cellValue))
                     {
                         _tableView.SetSelection(0, row, false);

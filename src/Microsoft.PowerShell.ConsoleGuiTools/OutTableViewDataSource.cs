@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Microsoft.PowerShell.OutGridView.Models;
 using Terminal.Gui.Views;
 
@@ -16,8 +17,8 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 internal sealed class OutTableViewDataSource : ITableSource
 {
     private readonly List<DataTableColumn> _columns;
+    private readonly Lock _lock = new();
     private readonly List<DataTableRow> _rows;
-    private readonly object _lock = new();
 
     /// <summary>
     ///     Creates an empty data source with the specified columns.
@@ -25,6 +26,7 @@ internal sealed class OutTableViewDataSource : ITableSource
     public OutTableViewDataSource(List<DataTableColumn> columns)
     {
         _columns = columns;
+        ColumnNames = columns.Select(c => c.Label).ToArray();
         _rows = new List<DataTableRow>();
     }
 
@@ -34,11 +36,12 @@ internal sealed class OutTableViewDataSource : ITableSource
     public OutTableViewDataSource(List<DataTableColumn> columns, List<DataTableRow> rows)
     {
         _columns = columns;
+        ColumnNames = columns.Select(c => c.Label).ToArray();
         _rows = new List<DataTableRow>(rows);
     }
 
     /// <inheritdoc />
-    public string[] ColumnNames => _columns.Select(c => c.Label).ToArray();
+    public string[] ColumnNames { get; }
 
     /// <inheritdoc />
     public int Columns => _columns.Count;
@@ -46,7 +49,13 @@ internal sealed class OutTableViewDataSource : ITableSource
     /// <inheritdoc />
     public int Rows
     {
-        get { lock (_lock) return _rows.Count; }
+        get
+        {
+            lock (_lock)
+            {
+                return _rows.Count;
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -73,7 +82,10 @@ internal sealed class OutTableViewDataSource : ITableSource
     /// </summary>
     public void AddRow(DataTableRow row)
     {
-        lock (_lock) _rows.Add(row);
+        lock (_lock)
+        {
+            _rows.Add(row);
+        }
     }
 
     /// <summary>
@@ -81,53 +93,49 @@ internal sealed class OutTableViewDataSource : ITableSource
     /// </summary>
     public int GetOriginalObjectIndex(int row)
     {
-        lock (_lock) return row >= 0 && row < _rows.Count ? _rows[row].OriginalObjectIndex : -1;
-    }
-
-    /// <summary>
-    ///     Gets a snapshot of all rows.
-    /// </summary>
-    public List<DataTableRow> GetAllRows()
-    {
-        lock (_lock) return new List<DataTableRow>(_rows);
+        lock (_lock)
+        {
+            return row >= 0 && row < _rows.Count ? _rows[row].OriginalObjectIndex : -1;
+        }
     }
 
     /// <summary>
     ///     Gets the column definitions.
     /// </summary>
-    public List<DataTableColumn> GetColumns() => _columns;
+    public List<DataTableColumn> GetColumns()
+    {
+        return _columns;
+    }
 
     /// <summary>
     ///     Creates a new filtered data source containing only rows matching the regex pattern.
+    ///     Returns itself if the pattern is empty (no copy needed).
     /// </summary>
     public OutTableViewDataSource Filter(string pattern)
     {
-        List<DataTableRow> allRows;
-        lock (_lock) allRows = new List<DataTableRow>(_rows);
-
         if (string.IsNullOrEmpty(pattern))
-            return new OutTableViewDataSource(_columns, allRows);
+            return this;
 
-        var result = allRows.Where(r => RowMatchesFilter(r, pattern)).ToList();
+        var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        List<DataTableRow> allRows;
+        lock (_lock)
+        {
+            allRows = new List<DataTableRow>(_rows);
+        }
+
+        var result = allRows.Where(r => RowMatchesFilter(r, regex, _columns)).ToList();
 
         return new OutTableViewDataSource(_columns, result);
     }
 
-    /// <summary>
-    ///     Creates a data source from an existing <see cref="DataTable" />.
-    /// </summary>
-    public static OutTableViewDataSource FromDataTable(DataTable dataTable)
+    private static bool RowMatchesFilter(DataTableRow row, Regex regex, List<DataTableColumn> columns)
     {
-        return new OutTableViewDataSource(dataTable.DataColumns, dataTable.Data);
-    }
-
-    private bool RowMatchesFilter(DataTableRow row, string pattern)
-    {
-        foreach (var column in _columns)
+        foreach (var column in columns)
         {
             var columnKey = column.ToString();
             if (row.Values.TryGetValue(columnKey, out var value) &&
-                Regex.IsMatch(value.DisplayValue, pattern, RegexOptions.IgnoreCase))
+                regex.IsMatch(value.DisplayValue))
                 return true;
         }
 

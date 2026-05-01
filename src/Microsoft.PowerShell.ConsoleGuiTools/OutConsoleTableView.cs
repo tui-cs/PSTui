@@ -26,6 +26,7 @@ internal sealed class OutConsoleTableView : IDisposable
     private List<DataTableColumn>? _columns;
     private OutTableViewDataSource? _dataSource;
     private int _objectIndex;
+    private int _pendingNotify; // 0 = no pending UI update, 1 = scheduled
     private HashSet<int>? _result;
     private Thread? _uiThread;
     private OutTableViewWindow? _window;
@@ -66,8 +67,14 @@ internal sealed class OutConsoleTableView : IDisposable
             _dataSource!.AddRow(row);
         }
 
-        // Notify UI thread of new data
-        _app?.Invoke(() => _window?.OnDataChanged());
+        // Coalesce UI notifications: only schedule one Invoke at a time.
+        // When it fires it picks up ALL rows added since the last notification.
+        if (Interlocked.CompareExchange(ref _pendingNotify, 1, 0) == 0)
+            _app?.Invoke(() =>
+            {
+                Interlocked.Exchange(ref _pendingNotify, 0);
+                _window?.OnDataChanged();
+            });
     }
 
     /// <summary>
