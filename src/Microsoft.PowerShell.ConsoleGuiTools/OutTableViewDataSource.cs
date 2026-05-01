@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -127,6 +128,48 @@ internal sealed class OutTableViewDataSource : ITableSource
         var result = allRows.Where(r => RowMatchesFilter(r, regex, _columns)).ToList();
 
         return new OutTableViewDataSource(_columns, result);
+    }
+
+    /// <summary>
+    ///     Creates a new data source with rows sorted by the specified column.
+    ///     The sorted column header is decorated with ▲ (ascending) or ▼ (descending).
+    /// </summary>
+    public OutTableViewDataSource Sort(int columnIndex, bool descending)
+    {
+        if (columnIndex < 0 || columnIndex >= _columns.Count)
+            return this;
+
+        List<DataTableRow> allRows;
+        lock (_lock)
+        {
+            allRows = new List<DataTableRow>(_rows);
+        }
+
+        var columnKey = _columns[columnIndex].ToString();
+
+        var sorted = descending
+            ? allRows.OrderByDescending(r => GetSortValue(r, columnKey))
+            : allRows.OrderBy(r => GetSortValue(r, columnKey));
+
+        var result = new OutTableViewDataSource(_columns, sorted.ToList());
+
+        // Decorate the sorted column header with a direction glyph
+        string glyph = descending ? " ▼" : " ▲";
+        result.ColumnNames[columnIndex] = _columns[columnIndex].Label + glyph;
+
+        return result;
+    }
+
+    private static IComparable GetSortValue(DataTableRow row, string columnKey)
+    {
+        if (!row.Values.TryGetValue(columnKey, out var value))
+            return string.Empty;
+
+        // Try numeric sort first
+        if (double.TryParse(value.DisplayValue, out var numericValue))
+            return numericValue;
+
+        return value.DisplayValue;
     }
 
     private static bool RowMatchesFilter(DataTableRow row, Regex regex, List<DataTableColumn> columns)

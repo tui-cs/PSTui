@@ -32,6 +32,8 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
     private TextField? _filterField;
     private Label? _filterLabel;
     private bool _isLoading = true;
+    private int _sortColumn = -1;
+    private bool _sortDescending;
 
     private StatusBar? _statusBar;
     private TableView? _tableView;
@@ -217,6 +219,19 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
         _tableView.Table = _filteredDataSource;
     }
 
+    private void ApplySortAndFilter()
+    {
+        // Apply filter first, then sort
+        ApplyFilter();
+
+        if (_sortColumn < 0 || _filteredDataSource == null || _tableView == null)
+            return;
+
+        _filteredDataSource = _filteredDataSource.Sort(_sortColumn, _sortDescending);
+        _tableView.Table = _filteredDataSource;
+        _tableView?.Update();
+    }
+
     private void ApplySearch()
     {
         if (string.IsNullOrEmpty(_applicationData.Search) || _filteredDataSource == null || _tableView == null)
@@ -335,6 +350,31 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
 
         // Enter key activates selection
         if (_applicationData.OutputMode != OutputModeOption.None) _tableView.Accepted += (_, _) => Accept();
+
+        // Column header click sorts
+        _tableView.Activating += (_, e) =>
+        {
+            if (e.Context?.Binding is not MouseBinding { MouseEvent: { } mouse })
+                return;
+
+            if (!mouse.Flags.HasFlag(MouseFlags.LeftButtonClicked))
+                return;
+
+            _tableView.ScreenToCell(mouse.Position!.Value, out int? clickedCol);
+            if (clickedCol == null)
+                return;
+
+            // Toggle direction if clicking same column, otherwise sort ascending
+            if (clickedCol.Value == _sortColumn)
+                _sortDescending = !_sortDescending;
+            else
+            {
+                _sortColumn = clickedCol.Value;
+                _sortDescending = false;
+            }
+
+            ApplySortAndFilter();
+        };
 
         Add(_tableView);
     }
