@@ -74,6 +74,18 @@ public class OutConsoleTableViewCmdletCommand : PSCmdlet, IDisposable
     public SwitchParameter FullScreen { set; get; }
 
     /// <summary>
+    ///     Gets or sets which UI element should receive initial focus (Table or Filter).
+    /// </summary>
+    [Parameter(HelpMessage = "Specifies which UI element receives initial focus. Valid values are 'Table' (default) and 'Filter'.")]
+    public FocusTarget Focus { set; get; } = FocusTarget.Table;
+
+    /// <summary>
+    ///     Gets or sets a search string that positions the cursor on the first matching row.
+    /// </summary>
+    [Parameter(HelpMessage = "Positions the cursor on the first row matching this regex pattern. Unlike -Filter, non-matching rows remain visible.")]
+    public string? Search { set; get; }
+
+    /// <summary>
     ///     Gets or sets the Terminal.Gui driver to use.
     /// </summary>
     [Parameter(HelpMessage =
@@ -153,6 +165,8 @@ public class OutConsoleTableViewCmdletCommand : PSCmdlet, IDisposable
                 Filter = Filter,
                 MinUI = MinUI,
                 FullScreen = FullScreen,
+                Focus = Focus,
+                Search = Search,
                 Driver = ForceDriver,
                 Verbose = Verbose,
                 Debug = Debug,

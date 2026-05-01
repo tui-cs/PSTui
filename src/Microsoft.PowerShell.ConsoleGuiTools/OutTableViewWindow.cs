@@ -105,7 +105,11 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
         }
 
         OnRunning?.Invoke();
-        _tableView?.SetFocus();
+
+        if (_applicationData.Focus == FocusTarget.Filter && _filterField != null)
+            _filterField.SetFocus();
+        else
+            _tableView?.SetFocus();
     }
 
     /// <summary>
@@ -125,6 +129,7 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
     {
         _isLoading = false;
         OnLoadingComplete();
+        ApplySearch();
     }
 
     /// <summary>
@@ -197,6 +202,33 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
         _tableView.Table = _filteredDataSource;
     }
 
+    private void ApplySearch()
+    {
+        if (string.IsNullOrEmpty(_applicationData.Search) || _filteredDataSource == null || _tableView == null)
+            return;
+
+        try
+        {
+            var regex = new Regex(_applicationData.Search, RegexOptions.IgnoreCase);
+            for (var row = 0; row < _filteredDataSource.Rows; row++)
+            {
+                for (var col = 0; col < _filteredDataSource.Columns; col++)
+                {
+                    var cellValue = _filteredDataSource[row, col]?.ToString() ?? string.Empty;
+                    if (regex.IsMatch(cellValue))
+                    {
+                        _tableView.SetSelection(0, row, false);
+                        return;
+                    }
+                }
+            }
+        }
+        catch (RegexParseException)
+        {
+            // Invalid regex — silently ignore
+        }
+    }
+
     #endregion
 
     #region UI Construction
@@ -220,6 +252,12 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
         };
 
         _filterField.KeyBindings.Remove(Key.A.WithCtrl);
+
+        _filterField.Accepted += (_, _) =>
+        {
+            if (_applicationData.OutputMode != OutputModeOption.None)
+                Accept();
+        };
 
         _filterErrorView = new View
         {
@@ -273,6 +311,12 @@ internal sealed class OutTableViewWindow : Runnable<HashSet<int>>
             },
             ViewportSettings = ViewportSettingsFlags.HasScrollBars
         };
+
+        // TableView typically is a grid where nav keys are biased for moving left/right.
+        _tableView.KeyBindings.Remove(Key.Home);
+        _tableView.KeyBindings.Add(Key.Home, Command.Start);
+        _tableView.KeyBindings.Remove(Key.End);
+        _tableView.KeyBindings.Add(Key.End, Command.End);
 
         // Enter key activates selection
         if (_applicationData.OutputMode != OutputModeOption.None) _tableView.Accepted += (_, _) => Accept();

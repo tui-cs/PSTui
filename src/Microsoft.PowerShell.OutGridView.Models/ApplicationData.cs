@@ -60,4 +60,14 @@ public class ApplicationData
     ///     Gets or sets the version of the module.
     /// </summary>
     public string? ModuleVersion { get; set; }
+
+    /// <summary>
+    ///     Gets or sets which UI element should receive initial focus.
+    /// </summary>
+    public FocusTarget Focus { get; set; } = FocusTarget.Table;
+
+    /// <summary>
+    ///     Gets or sets a search pattern that positions the cursor on the first matching row.
+    /// </summary>
+    public string? Search { get; set; }
 }
