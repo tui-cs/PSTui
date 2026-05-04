@@ -1,8 +1,9 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Management.Automation;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.PowerShell.OutGridView.Models;
@@ -16,37 +17,37 @@ using Terminal.Gui.Views;
 namespace Microsoft.PowerShell.ConsoleGuiTools;
 
 /// <summary>
-///     Provides the Terminal.Gui Window implementation for displaying tabular data with filtering and selection
-///     capabilities.
+///     Provides the Terminal.Gui Window implementation for displaying tabular data using <see cref="TableView" />
+///     with filtering, marking, and streaming support.
 /// </summary>
 internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 {
     private const string FILTER_LABEL = "_Filter:";
-    private const int CHECK_WIDTH = 2;
+
     private readonly ApplicationData _applicationData;
-    private DataTable? _dataTable;
-    private GridViewDataSource? _filteredSource;
+    private readonly OutGridViewDataSource _masterDataSource;
+
+    private OutGridViewDataSource? _filteredDataSource;
     private View? _filterErrorView;
     private TextField? _filterField;
-
     private Label? _filterLabel;
-    private Header? _header;
-    private GridViewDataSource? _inputSource;
+    private bool _isLoading = true;
+    private int _sortColumn = -1;
+    private bool _sortDescending;
 
-    private bool _laidOut;
-    private ListView? _listView;
-
-    private int _maxHeight;
-    private int[]? _naturalColumnWidths;
     private StatusBar? _statusBar;
+    private TableView? _tableView;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="OutGridViewWindow" /> class with the specified application data.
+    ///     Initializes a new instance of the <see cref="OutGridViewWindow" /> class.
     /// </summary>
-    /// <param name="applicationData">The configuration and data to display in the grid view.</param>
-    public OutGridViewWindow(ApplicationData applicationData)
+    /// <param name="applicationData">The configuration and data to display.</param>
+    /// <param name="dataSource">The data source (may grow during streaming).</param>
+    public OutGridViewWindow(ApplicationData applicationData, OutGridViewDataSource dataSource)
     {
         _applicationData = applicationData;
+        _masterDataSource = dataSource;
+
         Title = _applicationData.Title ?? "Out-ConsoleGridView";
         SchemeName = SchemeManager.SchemesToSchemeName(Schemes.Base);
         BorderStyle = FrameView.DefaultBorderStyle;
@@ -54,7 +55,8 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         switch (_applicationData.MinUI)
         {
             case true:
-                BorderStyle = LineStyle.None;
+                //BorderStyle = LineStyle.None;
+                Border.Thickness = new Thickness(0, string.IsNullOrEmpty(_applicationData.Title) ? 0 : 1, 0, 0);
                 if (!string.IsNullOrEmpty(_applicationData.Filter)) AddFilter();
                 break;
             case false:
@@ -63,30 +65,25 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
                 break;
         }
 
-        // Convert PSObjects to DataTable using TypeGetter which handles format data properly
-        if (_applicationData.PSObjects is { Count: > 0 })
-        {
-            var psObjects = _applicationData.PSObjects.Cast<PSObject>().ToList();
-            _dataTable = TypeGetter.CastObjectsToTableView(psObjects);
-        }
-        else
-        {
-            _dataTable = new DataTable([], []);
-        }
-
-        // Copy the input DataTable into our master source list
-        _inputSource = LoadData();
-
-        AddListView();
+        AddStatusBar();
+        AddTableView();
         ApplyFilter();
     }
+
+    /// <summary>
+    ///     Optional callback invoked when the window starts running (UI is ready for interaction).
+    /// </summary>
+    internal Action? OnRunning { get; set; }
+
+    private int _maxHeight;
+    private bool _laidOut;
 
     protected override void OnIsRunningChanged(bool newIsRunning)
     {
         base.OnIsRunningChanged(newIsRunning);
         if (!newIsRunning) return;
 
-        App?.LayoutAndDrawComplete += (sender, args) =>
+        App?.LayoutAndDrawComplete += (_, _) =>
         {
             _maxHeight = !_laidOut ? Frame.Height : Math.Max(_maxHeight, Frame.Height);
             _laidOut = true;
@@ -97,217 +94,181 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
             // If starting inline and height is Dim.Fill, change to Dim.Auto to avoid full screen
             Height = Dim.Auto();
 
-            _listView?.Height = Dim.Auto(
+            _tableView!.Height = Dim.Auto(
                 minimumContentDim:
                 Dim.Func(_ => Math.Max(
-                    _listView?.Source?.Count ?? 0,
-                    _maxHeight - ((_listView?.FrameToScreen().Top + _listView?.GetAdornmentsThickness().Vertical ??
-                                   0) + (_statusBar?.Frame.Height ?? 0) + Border.Thickness.Bottom))),
+                    _filteredDataSource?.Rows ?? 0,
+                    _maxHeight - ((_tableView.FrameToScreen().Top + _tableView.GetAdornmentsThickness().Vertical) +
+                                  (_statusBar?.Frame.Height ?? 0) + Border.Thickness.Bottom))),
                 maximumContentDim:
                 Dim.Func(_ =>
                     App?.Driver?.Screen.Height -
-                    ((_listView?.FrameToScreen().Top + _listView?.GetAdornmentsThickness().Vertical ??
-                     0) + (_statusBar?.Frame.Height ?? 0) + Border.Thickness.Bottom) ?? 0));
+                    ((_tableView.FrameToScreen().Top + _tableView.GetAdornmentsThickness().Vertical) +
+                     (_statusBar?.Frame.Height ?? 0) + Border.Thickness.Bottom) ?? 0));
         }
 
-        // We do this here, because _statusBar requires the Application to be running to
-        // access the driver information.
-        if (!_applicationData.MinUI) AddStatusBar();
+        OnRunning?.Invoke();
 
-        _listView?.SetFocus();
+        if (_applicationData.Focus == FocusTarget.Filter && _filterField != null)
+            _filterField.SetFocus();
+        else
+            _tableView?.SetFocus();
     }
 
     /// <summary>
-    ///     Gets the original indexes of all marked rows.
+    ///     Called (via Application.Invoke) when new rows have been added to the master data source during streaming.
     /// </summary>
-    /// <returns>A set of zero-based indexes from the original data table.</returns>
+    public void OnDataChanged()
+    {
+        if (string.IsNullOrEmpty(_applicationData.Filter))
+        {
+            // No filter active — just point the table at the master source directly (no copy)
+            if (_filteredDataSource != _masterDataSource)
+            {
+                _filteredDataSource = _masterDataSource;
+                _tableView!.Table = _filteredDataSource;
+            }
+            _tableView?.Update();
+        }
+        else
+        {
+            ApplyFilter();
+        }
+
+        if (_isLoading)
+            _rowsShortcut.Text = $"{_masterDataSource.Rows} rows";
+    }
+
+    /// <summary>
+    ///     Called (via Application.Invoke) when the pipeline has finished sending objects.
+    /// </summary>
+    public void OnPipelineComplete()
+    {
+        _isLoading = false;
+        OnLoadingComplete();
+        ApplySearch();
+    }
+
+    /// <summary>
+    ///     Gets the original indexes of all selected rows using TableView's native multi-selection.
+    /// </summary>
     public HashSet<int> GetSelectedIndexes()
     {
-        if (_inputSource == null) return [];
-
-        var selectedIndexes = new HashSet<int>();
-
-        foreach (var gvr in _inputSource.GridViewRowList.Where(gvr => gvr.IsMarked))
-            selectedIndexes.Add(gvr.OriginalIndex);
-
-        return selectedIndexes;
-    }
-
-    #region Data Management
-
-    /// <summary>
-    ///     Loads data from the application data table into grid view rows.
-    /// </summary>
-    /// <returns>A data source containing the loaded rows.</returns>
-    private GridViewDataSource LoadData()
-    {
-        var items = new List<GridViewRow>();
-        if (_dataTable?.Data.Count == 0)
-            return new GridViewDataSource(items);
-
-        // Calculate and cache natural column widths
-        _naturalColumnWidths = CalculateNaturalColumnWidths(_dataTable?.DataColumns.Select(c => c.Label).ToList());
-
-        for (var i = 0; i < _dataTable?.Data.Count; i++)
-        {
-            var dataTableRow = _dataTable.Data[i];
-            var valueList = new List<string>();
-            foreach (var dataTableColumn in _dataTable.DataColumns)
-            {
-                var columnKey = dataTableColumn.ToString();
-
-                // Check if the key exists in the dictionary
-                valueList.Add(dataTableRow.Values.TryGetValue(columnKey, out var value)
-                    ? value.DisplayValue
-                    // Key not found - this means the dictionary was populated with different keys
-                    // This is a bug - let's add empty string for now to avoid crash
-                    : string.Empty);
-            }
-
-            items.Add(new GridViewRow
-            {
-                DisplayString = GridViewHelpers.GetPaddedString(valueList, 0, _naturalColumnWidths),
-                OriginalIndex = i
-            });
-        }
-
-        // Anytime we load, we need to update the headers.
-        // Note, if ListView had a SourceChanged event, this could be done more automatically.
-        _header?.SetHeaders(_dataTable?.DataColumns.Select(c => c.Label).ToList(), _naturalColumnWidths);
-
-        var source = new GridViewDataSource(items);
-        source.MaxItemLength = _naturalColumnWidths!.Sum() + (_naturalColumnWidths!.Length - 1);
-        return source;
-    }
-
-    #endregion
-
-    #region Layout Calculation
-
-    /// <summary>
-    ///     Calculates the natural column widths needed to display all data without truncation.
-    /// </summary>
-    /// <param name="gridHeaders">The column headers for the grid.</param>
-    /// <returns>An array of column widths where each width is the maximum needed for that column.</returns>
-    private int[] CalculateNaturalColumnWidths(List<string>? gridHeaders)
-    {
-        if (gridHeaders is null || _dataTable is null)
+        if (_tableView == null || _filteredDataSource == null)
             return [];
 
-        var columnWidths = new int[gridHeaders.Count];
+        var selectedRows = new HashSet<int>();
+        foreach (var cell in _tableView.GetAllSelectedCells())
+        {
+            var origIdx = _filteredDataSource.GetOriginalObjectIndex(cell.Y);
+            if (origIdx >= 0)
+                selectedRows.Add(origIdx);
+        }
 
-        // Start with header widths
-        for (var i = 0; i < gridHeaders.Count; i++)
-            columnWidths[i] = gridHeaders[i].Length;
-
-        // Expand to fit data
-        foreach (var row in _dataTable.Data)
-            for (var i = 0; i < _dataTable.DataColumns.Count; i++)
-            {
-                var columnKey = _dataTable.DataColumns[i].ToString();
-                if (row.Values.TryGetValue(columnKey, out var value))
-                {
-                    var len = value.DisplayValue.Length;
-                    if (len > columnWidths[i])
-                        columnWidths[i] = len;
-                }
-            }
-
-        return columnWidths;
+        return selectedRows;
     }
-
-    #endregion
-
-    #region Filtering
-
-    /// <summary>
-    ///     Applies the current filter to the input data and updates the list view with matching rows.
-    /// </summary>
-    private void ApplyFilter()
-    {
-        GridViewRow? selectedItem = null;
-
-        if (_filteredSource != null)
-        {
-            selectedItem = _filteredSource.GridViewRowList.ElementAtOrDefault(_listView?.SelectedItem ?? 0);
-            _filteredSource.MarkChanged -= OnFilteredSourceMarkChanged;
-            _filteredSource = null;
-        }
-
-        // TODO: this is probably not needed; it is here defensively
-        _inputSource ??= LoadData();
-
-        try
-        {
-            _filteredSource = new GridViewDataSource(GridViewHelpers.FilterData(_inputSource.GridViewRowList,
-                _applicationData.Filter ?? string.Empty));
-            _filteredSource.MaxItemLength = _inputSource.MaxItemLength;
-        }
-        catch (RegexParseException ex)
-        {
-            _filterErrorView?.Text = ex.Message;
-        }
-
-        _filteredSource?.MarkChanged += OnFilteredSourceMarkChanged;
-
-        _listView?.Source = _filteredSource;
-
-        if (selectedItem is not null && _filteredSource != null)
-        {
-            var newIndex =
-                _filteredSource.GridViewRowList.FindIndex(i => i.OriginalIndex == selectedItem.OriginalIndex);
-            if (newIndex >= 0 && _listView != null)
-                _listView.SelectedItem = newIndex;
-        }
-
-        if (_listView?.SelectedItem == null && _listView is { Source.Count: > 0 })
-            _listView.SelectedItem = 0;
-    }
-
-    /// <summary>
-    ///     Handles mark changed events from the filtered list view and propagates changes to the input source.
-    /// </summary>
-    /// <param name="s">The event sender.</param>
-    /// <param name="a">The event arguments containing the row that was marked or unmarked.</param>
-    private void OnFilteredSourceMarkChanged(object? s, GridViewDataSource.RowMarkedEventArgs a)
-    {
-        _inputSource?.GridViewRowList[a.Row.OriginalIndex].IsMarked = a.Row.IsMarked;
-    }
-
-    #endregion
 
     #region User Actions
 
-    /// <summary>
-    ///     Accepts the current selection and closes the window.
-    /// </summary>
     private void Accept()
     {
         Result = GetSelectedIndexes();
         App?.RequestStop();
     }
 
-    /// <summary>
-    ///     Cancels the operation and closes the window.
-    /// </summary>
-    private void Close()
+    #endregion
+
+    #region Filtering
+
+    private void ApplyFilter()
     {
-        Result = null;
-        App?.RequestStop();
+        // Save the currently selected row's original index so we can restore position
+        int? selectedOriginalIndex = null;
+        if (_filteredDataSource != null && _tableView is { Value.Cursor.Y: >= 0 } &&
+            _tableView.Value.Cursor.Y < _filteredDataSource.Rows)
+            selectedOriginalIndex = _filteredDataSource.GetOriginalObjectIndex(_tableView.Value.Cursor.Y);
+
+        try
+        {
+            if (_filterErrorView != null) _filterErrorView.Text = string.Empty;
+            _filteredDataSource = _masterDataSource.Filter(_applicationData.Filter ?? string.Empty);
+        }
+        catch (RegexParseException ex)
+        {
+            if (_filterErrorView != null) _filterErrorView.Text = ex.Message;
+            return;
+        }
+
+        RebuildTableSource();
+
+        // Restore selection position
+        if (selectedOriginalIndex.HasValue && _filteredDataSource != null && _tableView != null)
+            for (var i = 0; i < _filteredDataSource.Rows; i++)
+                if (_filteredDataSource.GetOriginalObjectIndex(i) == selectedOriginalIndex.Value)
+                {
+                    _tableView.SetSelection(0, i, false);
+                    break;
+                }
+
+        _tableView?.Update();
+    }
+
+    private void RebuildTableSource()
+    {
+        if (_filteredDataSource == null || _tableView == null) return;
+        _tableView.Table = _filteredDataSource;
+    }
+
+    private void ApplySortAndFilter()
+    {
+        // Apply filter first, then sort
+        ApplyFilter();
+
+        if (_sortColumn < 0 || _filteredDataSource == null || _tableView == null)
+            return;
+
+        _filteredDataSource = _filteredDataSource.Sort(_sortColumn, _sortDescending);
+        _tableView.Table = _filteredDataSource;
+        _tableView?.Update();
+    }
+
+    private void ApplySearch()
+    {
+        if (string.IsNullOrEmpty(_applicationData.Search) || _filteredDataSource == null || _tableView == null)
+            return;
+
+        try
+        {
+            var regex = new Regex(_applicationData.Search, RegexOptions.IgnoreCase);
+            for (var row = 0; row < _filteredDataSource.Rows; row++)
+            {
+                for (var col = 0; col < _filteredDataSource.Columns; col++)
+                {
+                    var cellValue = _filteredDataSource[row, col].ToString() ?? string.Empty;
+                    if (regex.IsMatch(cellValue))
+                    {
+                        _tableView.SetSelection(0, row, false);
+                        return;
+                    }
+                }
+            }
+        }
+        catch (RegexParseException)
+        {
+            // Invalid regex — silently ignore
+        }
     }
 
     #endregion
 
     #region UI Construction
 
-    /// <summary>
-    ///     Adds the filter text field and error display to the window.
-    /// </summary>
     private void AddFilter()
     {
         _filterLabel = new Label
         {
             Text = FILTER_LABEL,
+            X = 0,
             Y = 0
         };
 
@@ -321,7 +282,12 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
         };
 
         _filterField.KeyBindings.Remove(Key.A.WithCtrl);
-        _filterField.KeyBindings.Remove(Key.D.WithCtrl);
+
+        _filterField.Accepted += (_, _) =>
+        {
+            if (_applicationData.OutputMode != OutputModeOption.None)
+                Accept();
+        };
 
         _filterErrorView = new View
         {
@@ -335,109 +301,128 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 
         _filterField.TextChanged += (_, _) =>
         {
-            var filterText = _filterField.Text;
             try
             {
-                _filterErrorView.Text = string.Empty;
-                _applicationData.Filter = filterText;
+                _filterErrorView?.Text = string.Empty;
+                _applicationData.Filter = _filterField.Text;
                 ApplyFilter();
             }
             catch (Exception ex)
             {
-                _filterErrorView.Text = ex.Message;
+                _filterErrorView?.Text = ex.Message;
             }
         };
 
         Add(_filterLabel, _filterField, _filterErrorView);
-
         _filterField.Text = _applicationData.Filter ?? string.Empty;
         _filterField.InsertionPoint = _filterField.Text.Length;
     }
 
-    /// <summary>
-    ///     Adds the main list view control to the window with configured selection behavior.
-    /// </summary>
-    private void AddListView()
+    private void AddTableView()
     {
-        _listView = new ListView
+        _tableView = new TableView
         {
+            X = 0,
             Y = _filterErrorView is not null ? Pos.Bottom(_filterErrorView) : 0,
             Width = Dim.Fill(),
-            ShowMarks = _applicationData.OutputMode != OutputModeOption.None,
-            MarkMultiple = _applicationData.OutputMode == OutputModeOption.Multiple,
-            SelectedItem = 0,
+            Height = _statusBar is not null ? Dim.Fill(_statusBar) : Dim.Fill(),
+            FullRowSelect = true,
+            MultiSelect = _applicationData.OutputMode == OutputModeOption.Multiple,
+            Style = new TableStyle
+            {
+                ShowHeaders = true,
+                AlwaysShowHeaders = true,
+                ExpandLastColumn = true,
+                ShowHorizontalHeaderUnderline = false,
+                ShowVerticalHeaderLines = false,
+                ShowHorizontalHeaderOverline = false,
+                ShowVerticalCellLines = false,
+                SmoothHorizontalScrolling = true
+            },
             ViewportSettings = ViewportSettingsFlags.HasScrollBars
         };
 
-        _listView.Height = _statusBar is not null ? Dim.Fill(_statusBar) : Dim.Fill();
+        // TableView typically is a grid where nav keys are biased for moving left/right.
+        _tableView.KeyBindings.Remove(Key.Home);
+        _tableView.KeyBindings.Add(Key.Home, Command.Start);
+        _tableView.KeyBindings.Remove(Key.End);
+        _tableView.KeyBindings.Add(Key.End, Command.End);
 
-        _listView.KeyBindings.Remove(Key.A.WithCtrl);
+        // Enter key activates selection
+        if (_applicationData.OutputMode != OutputModeOption.None) _tableView.Accepted += (_, _) => Accept();
 
-        AddHeader();
-
-        _listView.Accepted += (sender, args) => Accept();
-
-        Add(_listView);
-        return;
-
-        void AddHeader()
+        // Column header click sorts
+        _tableView.Activating += (_, e) =>
         {
-            _header = new Header
+            if (e.Context?.Binding is not MouseBinding { MouseEvent: { } mouse })
+                return;
+
+            if (!mouse.Flags.HasFlag(MouseFlags.LeftButtonClicked))
+                return;
+
+            _tableView.ScreenToCell(mouse.Position!.Value, out int? clickedCol);
+            if (clickedCol == null)
+                return;
+
+            // Toggle direction if clicking same column, otherwise sort ascending
+            if (clickedCol.Value == _sortColumn)
+                _sortDescending = !_sortDescending;
+            else
             {
-                X = CHECK_WIDTH
-            };
+                _sortColumn = clickedCol.Value;
+                _sortDescending = false;
+            }
 
+            ApplySortAndFilter();
+        };
 
-            _listView.Padding.Thickness = _listView.Padding.Thickness with { Top = 1 };
-            _listView.Padding.GetOrCreateView().Add(_header);
-            _listView.VerticalScrollBar.Y = 1;
-
-            _header?.SetHeaders(_dataTable?.DataColumns.Select(c => c.Label).ToList(), _naturalColumnWidths);
-        }
+        Add(_tableView);
     }
 
+    private SpinnerView? _spinnerView;
 
-    /// <summary>
-    ///     Adds the status bar with keyboard shortcuts to the window.
-    /// </summary>
+    private readonly Shortcut _rowsShortcut = new()
+    {
+        Text = "Rows:",
+        CanFocus = false,
+        MouseHighlightStates = MouseState.None
+    };
+
     private void AddStatusBar()
     {
+        if (_applicationData.MinUI) return;
+
         var shortcuts = new List<Shortcut>();
+
+        // Spinner as 1st item while loading (streaming or reloading)
+        _spinnerView = new() { Style = new SpinnerStyle.Aesthetic(), Width = 8 };
+        _spinnerView.AutoSpin = _isLoading;
+        _rowsShortcut.CommandView = _spinnerView;
+        shortcuts.Add(_rowsShortcut);
+
         if (_applicationData.OutputMode != OutputModeOption.None)
-            shortcuts.Add(new Shortcut(Key.Space, "Select", null));
+            shortcuts.Add(new Shortcut(Key.Enter, "Accept", null));
 
         if (_applicationData.OutputMode == OutputModeOption.Multiple)
         {
-            shortcuts.Add(new Shortcut(Key.A.WithCtrl, "Sel. All", () =>
+            shortcuts.Add(new Shortcut(Key.A.WithCtrl, "Sel. All", () => _tableView?.SelectAll()));
+            shortcuts.Add(new Shortcut(Key.D.WithCtrl, "Desel. All", () =>
             {
-                _listView?.MarkAll(true);
-                _listView?.SetNeedsDraw();
-            }));
-
-            shortcuts.Add(new Shortcut(Key.D.WithCtrl, "Sel. None", () =>
-            {
-                _listView?.MarkAll(false);
-                _listView?.SetNeedsDraw();
+                _tableView?.MultiSelectedRegions.Clear();
+                _tableView?.SetNeedsDraw();
             }));
         }
 
-        if (_applicationData.OutputMode != OutputModeOption.None)
-            shortcuts.Add(new Shortcut(Key.Enter, "Accept", () =>
-            {
-                if (MostFocused == _filterField) _listView!.SetFocus();
-            }));
-
-        shortcuts.Add(new Shortcut(Key.Esc, "Close", Close));
-
+        shortcuts.Add(new Shortcut(Key.Esc, "Close", RequestStop));
 
         if (_applicationData.Verbose || _applicationData.Debug)
         {
             shortcuts.Add(new Shortcut(Key.Empty, $" v{_applicationData.ModuleVersion}", null));
-            var tgFileVersionInfo = FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location);
-            var tgVersion = tgFileVersionInfo?.FileVersion ?? "no version found";
-            //if (tgFileVersionInfo is { IsPreRelease: true })
+            var tgFileVersionInfo =
+                FileVersionInfo.GetVersionInfo(Assembly.GetAssembly(typeof(Application))!.Location);
+            var tgVersion = tgFileVersionInfo.FileVersion ?? "no version found";
             {
-                tgVersion = tgFileVersionInfo?.ProductVersion?[..tgFileVersionInfo.ProductVersion.IndexOf('+')] ??
+                tgVersion = tgFileVersionInfo.ProductVersion?[..tgFileVersionInfo.ProductVersion.IndexOf('+')] ??
                             tgVersion;
             }
             shortcuts.Add(new Shortcut(Key.Empty, $"{App?.Driver?.GetName()} v{tgVersion}", null));
@@ -445,6 +430,24 @@ internal sealed class OutGridViewWindow : Runnable<HashSet<int>>
 
         _statusBar = new StatusBar(shortcuts);
         Add(_statusBar);
+        MoveSubViewToEnd(_statusBar);
+    }
+
+    private void OnLoadingComplete()
+    {
+        if (_applicationData.MinUI) return;
+        if (_statusBar == null) return;
+
+        // Stop spinner and replace with final row count
+        // Setting CommandView disposes the old view
+        _spinnerView = null;
+        _rowsShortcut.CommandView = new View(){
+            Width = Dim.Auto(),
+            Height = Dim.Fill()
+        };
+
+        _rowsShortcut.Title = $"{_masterDataSource.Rows}";
+        _rowsShortcut.Text = "Rows: ";
     }
 
     #endregion

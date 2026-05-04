@@ -3,60 +3,124 @@
 
 using System;
 using System.Collections.Generic;
-using System.Configuration;
+using System.Management.Automation;
+using System.Threading;
 using Microsoft.PowerShell.OutGridView.Models;
 using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
 
 namespace Microsoft.PowerShell.ConsoleGuiTools;
 
 /// <summary>
-///     Provides the main orchestration for the Out-ConsoleGridView cmdlet, managing the Terminal.Gui application lifecycle
-///     and coordinating between the application data and the grid view window.
+///     Provides the main orchestration for Out-ConsoleGridView, managing the Terminal.Gui
+///     application lifecycle. Supports both batch (all objects upfront) and streaming
+///     (objects arrive incrementally from the pipeline) modes.
 /// </summary>
-/// <remarks>
-///     This class serves as a facade that initializes the Terminal.Gui framework, creates and runs the grid view window,
-///     and handles cleanup operations. It delegates the actual UI rendering and user interaction to the
-///     <see cref="OutGridViewWindow" /> class.
-/// </remarks>
 internal sealed class OutConsoleGridView : IDisposable
 {
+    private readonly List<PSObject> _psObjects = [];
+    private readonly TypeGetter _typeGetter = new();
+    private readonly ManualResetEventSlim _uiRunning = new(false);
+    private IApplication? _app;
     private ApplicationData? _applicationData;
+    private List<DataTableColumn>? _columns;
+    private OutGridViewDataSource? _dataSource;
+    private int _objectIndex;
+    private int _pendingNotify; // 0 = no pending UI update, 1 = scheduled
+    private HashSet<int>? _result;
+    private Thread? _uiThread;
+    private OutGridViewWindow? _window;
 
-    /// <summary>
-    ///     Runs the grid view Terminal.Gui Application with the specified configuration and returns the indexes of selected items.
-    /// </summary>
-    /// <param name="applicationData">
-    ///     The application configuration containing the data table, output mode, filter settings, and other display options.
-    /// </param>
-    /// <returns>
-    ///     A <see cref="HashSet{T}" /> containing the zero-based indexes of items selected by the user.
-    ///     Returns an empty set if the user cancels the operation or if no items were selected.
-    /// </returns>
-    public HashSet<int> Run(ApplicationData applicationData)
+    public void Dispose()
     {
-        _applicationData = applicationData;
-
-        Terminal.Gui.Configuration.ConfigurationManager.Enable(Terminal.Gui.Configuration.ConfigLocations.All);
-
-        OutGridViewWindow window = new(_applicationData);
-        IApplication app = Application.Create();
-        app.AppModel = _applicationData.FullScreen ? AppModel.FullScreen : AppModel.Inline;
-        app.Init(driverName: _applicationData.Driver);
-        HashSet<int>? selectedIndexes = app.Run(window) as HashSet<int>;
-        window.Dispose();
-        app.Dispose();
-        return selectedIndexes ?? [];
+        _uiRunning.Dispose();
     }
 
     /// <summary>
-    ///     Releases resources used by the <see cref="OutConsoleGridView" />.
+    ///     Initializes the streaming session. Call this once before feeding objects.
     /// </summary>
-    /// <remarks>
-    ///     Currently, there are no resources to dispose. This method is provided for future extensibility
-    ///     and to follow the standard IDisposable pattern.
-    /// </remarks>
-    public void Dispose()
+    public void Initialize(ApplicationData applicationData)
     {
-        // No resources to dispose currently
+        _applicationData = applicationData;
+    }
+
+    /// <summary>
+    ///     Adds an object from the pipeline. On the first object, starts the UI on a background thread.
+    /// </summary>
+    public void AddObject(PSObject psObject)
+    {
+        _psObjects.Add(psObject);
+
+        if (_columns == null)
+        {
+            // First object: determine columns, add first row, then start UI
+            _columns = _typeGetter.GetDataColumnsForObject(psObject);
+            _dataSource = new OutGridViewDataSource(_columns);
+            var row = TypeGetter.CastObjectToDataTableRow(psObject, _columns, _objectIndex++);
+            _dataSource.AddRow(row);
+            StartUi();
+            _uiRunning.Wait();
+        }
+        else
+        {
+            var row = TypeGetter.CastObjectToDataTableRow(psObject, _columns, _objectIndex++);
+            _dataSource!.AddRow(row);
+        }
+
+        // Coalesce UI notifications: only schedule one Invoke at a time.
+        // When it fires it picks up ALL rows added since the last notification.
+        if (Interlocked.CompareExchange(ref _pendingNotify, 1, 0) == 0)
+            _app?.Invoke(() =>
+            {
+                Interlocked.Exchange(ref _pendingNotify, 0);
+                _window?.OnDataChanged();
+            });
+    }
+
+    /// <summary>
+    ///     Signals that the pipeline is complete and waits for the UI to finish.
+    ///     Returns the selected indexes.
+    /// </summary>
+    public HashSet<int> Complete()
+    {
+        if (_window == null)
+            return [];
+
+        _app?.Invoke(() => _window.OnPipelineComplete());
+        _uiThread?.Join();
+        return _result ?? [];
+    }
+
+    /// <summary>
+    ///     Gets the PSObject at the given original index (for output).
+    /// </summary>
+    public PSObject GetObject(int index)
+    {
+        return _psObjects[index];
+    }
+
+    private void StartUi()
+    {
+        _uiThread = new Thread(() =>
+        {
+            ConfigurationManager.AppName = "Out-ConsoleGridView";
+            ConfigurationManager.Enable(ConfigLocations.All);
+
+            _window = new OutGridViewWindow(_applicationData!, _dataSource!)
+            {
+                OnRunning = () => _uiRunning.Set()
+            };
+            _app = Application.Create();
+            _app.AppModel = _applicationData!.FullScreen ? AppModel.FullScreen : AppModel.Inline;
+            _app.Init(_applicationData.Driver);
+            _result = _app.Run(_window) as HashSet<int>;
+            _window.Dispose();
+            _app.Dispose();
+        })
+        {
+            IsBackground = true,
+            Name = "OutConsoleGridView-UI"
+        };
+        _uiThread.Start();
     }
 }

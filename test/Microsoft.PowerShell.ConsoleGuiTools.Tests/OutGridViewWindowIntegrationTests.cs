@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management.Automation;
 using Microsoft.PowerShell.OutGridView.Models;
 using Terminal.Gui.App;
@@ -62,7 +63,17 @@ public class OutGridViewWindowIntegrationTests
         Terminal.Gui.Configuration.ConfigurationManager.Enable(
             Terminal.Gui.Configuration.ConfigLocations.All);
 
-        using OutGridViewWindow window = new(appData);
+        // Build data source from PSObjects in appData
+        var typeGetter = new TypeGetter();
+        var psObjects = appData.PSObjects.Cast<PSObject>().ToList();
+        var columns = typeGetter.GetDataColumnsForObject(psObjects[0]);
+        var dataSource = new OutGridViewDataSource(columns);
+        for (int i = 0; i < psObjects.Count; i++)
+        {
+            dataSource.AddRow(TypeGetter.CastObjectToDataTableRow(psObjects[i], columns, i));
+        }
+
+        using OutGridViewWindow window = new(appData, dataSource);
         using IApplication app = Application.Create(new VirtualTimeProvider())
             .Init(driverName: "ansi");
 
@@ -140,17 +151,19 @@ public class OutGridViewWindowIntegrationTests
     }
 
     [Fact]
-    public void Enter_WithNoMarkedItems_ReturnsEmptySet()
+    public void Enter_WithNoMarkedItems_ReturnsCurrentRow()
     {
         var appData = CreateApplicationData(outputMode: OutputModeOption.Multiple);
 
         RunWithWindow(appData, (app, window) =>
         {
+            // With no explicitly marked items, Enter returns the currently-focused row
             app.Keyboard.RaiseKeyDownEvent(Key.Enter);
 
             Assert.NotNull(window.Result);
             var result = (HashSet<int>)window.Result;
-            Assert.Empty(result);
+            Assert.Single(result);
+            Assert.Contains(0, result);
         });
     }
 

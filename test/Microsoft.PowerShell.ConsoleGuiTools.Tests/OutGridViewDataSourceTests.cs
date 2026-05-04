@@ -10,10 +10,10 @@ using Xunit;
 namespace Microsoft.PowerShell.ConsoleGuiTools.Tests;
 
 /// <summary>
-///     Unit tests for <see cref="OutTableViewDataSource" /> covering filtering, sorting,
+///     Unit tests for <see cref="OutGridViewDataSource" /> covering filtering, sorting,
 ///     thread-safe row addition, and index tracking.
 /// </summary>
-public class OutTableViewDataSourceTests
+public class OutGridViewDataSourceTests
 {
     #region Helpers
 
@@ -33,10 +33,10 @@ public class OutTableViewDataSourceTests
         return new DataTableRow(dict, originalIndex);
     }
 
-    private static OutTableViewDataSource CreateTestDataSource()
+    private static OutGridViewDataSource CreateTestDataSource()
     {
         var columns = CreateColumns("Name", "Id");
-        var ds = new OutTableViewDataSource(columns);
+        var ds = new OutGridViewDataSource(columns);
         ds.AddRow(CreateRow(columns, 0, "Charlie", "3"));
         ds.AddRow(CreateRow(columns, 1, "Alice", "1"));
         ds.AddRow(CreateRow(columns, 2, "Bob", "2"));
@@ -51,7 +51,7 @@ public class OutTableViewDataSourceTests
     public void Constructor_EmptyDataSource_HasZeroRows()
     {
         var columns = CreateColumns("Name", "Id");
-        var ds = new OutTableViewDataSource(columns);
+        var ds = new OutGridViewDataSource(columns);
 
         Assert.Equal(0, ds.Rows);
         Assert.Equal(2, ds.Columns);
@@ -66,7 +66,7 @@ public class OutTableViewDataSourceTests
             CreateRow(columns, 0, "A"),
             CreateRow(columns, 1, "B")
         };
-        var ds = new OutTableViewDataSource(columns, rows);
+        var ds = new OutGridViewDataSource(columns, rows);
 
         Assert.Equal(2, ds.Rows);
     }
@@ -75,7 +75,7 @@ public class OutTableViewDataSourceTests
     public void ColumnNames_ReturnsLabels()
     {
         var columns = CreateColumns("Name", "Id", "Status");
-        var ds = new OutTableViewDataSource(columns);
+        var ds = new OutGridViewDataSource(columns);
 
         Assert.Equal(new[] { "Name", "Id", "Status" }, ds.ColumnNames);
     }
@@ -110,7 +110,7 @@ public class OutTableViewDataSourceTests
     public void AddRow_IncreasesRowCount()
     {
         var columns = CreateColumns("Name");
-        var ds = new OutTableViewDataSource(columns);
+        var ds = new OutGridViewDataSource(columns);
 
         ds.AddRow(CreateRow(columns, 0, "First"));
         Assert.Equal(1, ds.Rows);
@@ -123,7 +123,7 @@ public class OutTableViewDataSourceTests
     public async Task AddRow_ThreadSafe_ConcurrentAdds()
     {
         var columns = CreateColumns("Name");
-        var ds = new OutTableViewDataSource(columns);
+        var ds = new OutGridViewDataSource(columns);
         const int threadCount = 10;
         const int rowsPerThread = 100;
 
@@ -289,7 +289,7 @@ public class OutTableViewDataSourceTests
     public void Sort_NumericAware_ById()
     {
         var columns = CreateColumns("Name", "Id");
-        var ds = new OutTableViewDataSource(columns);
+        var ds = new OutGridViewDataSource(columns);
         ds.AddRow(CreateRow(columns, 0, "A", "10"));
         ds.AddRow(CreateRow(columns, 1, "B", "2"));
         ds.AddRow(CreateRow(columns, 2, "C", "1"));
@@ -365,7 +365,7 @@ public class OutTableViewDataSourceTests
     public void GetColumns_ReturnsSameColumnList()
     {
         var columns = CreateColumns("A", "B");
-        var ds = new OutTableViewDataSource(columns);
+        var ds = new OutGridViewDataSource(columns);
 
         Assert.Same(columns, ds.GetColumns());
     }

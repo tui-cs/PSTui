@@ -15,7 +15,7 @@ namespace Microsoft.PowerShell.ConsoleGuiTools;
 ///     An <see cref="ITableSource" /> implementation that wraps the OutGridView <see cref="DataTable" /> model.
 ///     Supports thread-safe row addition for streaming pipeline support (Issue #209).
 /// </summary>
-internal sealed class OutTableViewDataSource : ITableSource
+internal sealed class OutGridViewDataSource : ITableSource
 {
     private readonly List<DataTableColumn> _columns;
     private readonly Lock _lock = new();
@@ -24,7 +24,7 @@ internal sealed class OutTableViewDataSource : ITableSource
     /// <summary>
     ///     Creates an empty data source with the specified columns.
     /// </summary>
-    public OutTableViewDataSource(List<DataTableColumn> columns)
+    public OutGridViewDataSource(List<DataTableColumn> columns)
     {
         _columns = columns;
         ColumnNames = columns.Select(c => c.Label).ToArray();
@@ -34,7 +34,7 @@ internal sealed class OutTableViewDataSource : ITableSource
     /// <summary>
     ///     Creates a data source with pre-populated rows.
     /// </summary>
-    public OutTableViewDataSource(List<DataTableColumn> columns, List<DataTableRow> rows)
+    public OutGridViewDataSource(List<DataTableColumn> columns, List<DataTableRow> rows)
     {
         _columns = columns;
         ColumnNames = columns.Select(c => c.Label).ToArray();
@@ -112,7 +112,7 @@ internal sealed class OutTableViewDataSource : ITableSource
     ///     Creates a new filtered data source containing only rows matching the regex pattern.
     ///     Returns itself if the pattern is empty (no copy needed).
     /// </summary>
-    public OutTableViewDataSource Filter(string pattern)
+    public OutGridViewDataSource Filter(string pattern)
     {
         if (string.IsNullOrEmpty(pattern))
             return this;
@@ -127,14 +127,14 @@ internal sealed class OutTableViewDataSource : ITableSource
 
         var result = allRows.Where(r => RowMatchesFilter(r, regex, _columns)).ToList();
 
-        return new OutTableViewDataSource(_columns, result);
+        return new OutGridViewDataSource(_columns, result);
     }
 
     /// <summary>
     ///     Creates a new data source with rows sorted by the specified column.
     ///     The sorted column header is decorated with ▲ (ascending) or ▼ (descending).
     /// </summary>
-    public OutTableViewDataSource Sort(int columnIndex, bool descending)
+    public OutGridViewDataSource Sort(int columnIndex, bool descending)
     {
         if (columnIndex < 0 || columnIndex >= _columns.Count)
             return this;
@@ -151,7 +151,7 @@ internal sealed class OutTableViewDataSource : ITableSource
             ? allRows.OrderByDescending(r => GetSortValue(r, columnKey))
             : allRows.OrderBy(r => GetSortValue(r, columnKey));
 
-        var result = new OutTableViewDataSource(_columns, sorted.ToList());
+        var result = new OutGridViewDataSource(_columns, sorted.ToList());
 
         // Decorate the sorted column header with a direction glyph
         string glyph = descending ? " ▼" : " ▲";

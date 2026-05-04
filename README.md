@@ -1,6 +1,6 @@
-# ConsoleGuiTools - `Out-ConsoleGridView`, `Out-ConsoleTableView`, and `Show-ObjectTree`
+# ConsoleGuiTools - `Out-ConsoleGridView` and `Show-ObjectTree`
 
-This repo contains the `Out-ConsoleGridView`, `Out-ConsoleTableView`, and `Show-ObjectTree`
+This repo contains the `Out-ConsoleGridView` and `Show-ObjectTree`
 PowerShell Cmdlets providing console-based GUI experiences based on
 [Terminal.Gui (gui.cs)](https://github.com/gui-cs/Terminal.Gui).
 
@@ -14,8 +14,7 @@ Install-Module Microsoft.PowerShell.ConsoleGuiTools
 
 ## Features
 
-* [`Out-ConsoleGridview`](docs/Microsoft.PowerShell.ConsoleGuiTools/Out-ConsoleGridView.md) - Send objects to a grid view window for interactive filtering and sorting.
-* [`Out-ConsoleTableView`](docs/Microsoft.PowerShell.ConsoleGuiTools/Out-ConsoleTableView.md) - Send objects to a table view with column headers, horizontal scrolling, streaming, and native multi-selection.
+* [`Out-ConsoleGridView`](docs/Microsoft.PowerShell.ConsoleGuiTools/Out-ConsoleGridView.md) - Send objects to an interactive table view with column headers, horizontal scrolling, streaming, sorting, and native multi-selection.
 * [`Show-ObjectTree`](docs/Microsoft.PowerShell.ConsoleGuiTools/Show-ObjectTree.md) - Send objects to a tree view window for interactive filtering and sorting.
 
 * Cross-platform - Works on any platform that supports PowerShell 7.2+.
@@ -130,21 +129,21 @@ This command gets the processes running on the local computer and sends them to 
 
 Use right arrow when a row has a `+` symbol to expand the tree. Left arrow will collapse the tree.
 
-### Example 9: Output processes to a table view
+### Example 9: Output processes to a grid view with streaming
 
 ```PowerShell
-Get-Process | Out-ConsoleTableView
+Get-Process | Out-ConsoleGridView
 ```
 
-This command gets the processes running on the local computer and sends them to a table view with column headers. The table appears as soon as the first object arrives — rows stream in as the pipeline executes.
+This command gets the processes running on the local computer and sends them to an interactive table with column headers. The table appears as soon as the first object arrives — rows stream in as the pipeline executes.
 
-### Example 10: Search for a specific row in the table view
+### Example 10: Search for a specific row in the grid view
 
 ```PowerShell
-Get-Service | octv -Search "wuauserv" -Focus Filter
+Get-Service | ocgv -Search "wuauserv" -Focus Filter
 ```
 
-This command displays all services in a table view, positions the cursor on the first row matching "wuauserv", and starts with focus in the filter field.
+This command displays all services in a grid view, positions the cursor on the first row matching "wuauserv", and starts with focus in the filter field.
 
 ## Development
 
@@ -220,7 +219,7 @@ to learn more.
 
 `ConsoleGuiTools` consists of 2 .NET Projects:
 
-* ConsoleGuiTools - Cmdlet implementation for Out-ConsoleGridView, Out-ConsoleTableView, and Show-ObjectTree
+* ConsoleGuiTools - Cmdlet implementation for Out-ConsoleGridView and Show-ObjectTree
 * OutGridView.Models - Contains data contracts between the GUI & Cmdlet
 
 _Note:_ Previously, this repo included `Microsoft.PowerShell.GraphicalTools` which included the Avalonia-based `Out-GridView` (implemented in `.\Microsoft.PowerShell.GraphicalTools` and `.\OutGridView.Gui`). These components have been deprecated (see note above).
