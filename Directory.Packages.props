@@ -1,8 +1,8 @@
 <Project>
   <ItemGroup>
-    <PackageVersion Include="Microsoft.PowerShell.SDK" Version="7.5.4" />
+    <PackageVersion Include="Microsoft.PowerShell.SDK" Version="7.6.1" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageVersion Include="System.Management.Automation" Version="7.5.4" />
+    <PackageVersion Include="System.Management.Automation" Version="7.6.1" />
     <PackageVersion Include="Terminal.Gui" Version="2.1.0" />
     <!-- Test dependencies -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
