@@ -67,7 +67,11 @@ jobs:
       - name: Install PowerShell 7.6+
         shell: bash
         run: |
-          dotnet tool install --global --version "7.6.*" PowerShell
+          # The repo nuget.config clears sources and lists only the
+          # authenticated PowerShell CFS feed, which doesn't carry the
+          # `PowerShell` tool (401). Pull it from nuget.org explicitly.
+          dotnet tool install --global --version "7.6.*" PowerShell \
+            --add-source "https://api.nuget.org/v3/index.json" --ignore-failed-sources
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Verify PowerShell version
