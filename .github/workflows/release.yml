@@ -144,8 +144,10 @@ jobs:
           Set-Content -Path $manifest -Value $c
           Test-ModuleManifest -Path $manifest | Format-List Name, Version, PrivateData
 
+      # Publishing is hard-locked to `main`: even with the key present, a
+      # workflow_dispatch on develop is a safe dry run (build/test/stamp only).
       - name: Publish to PowerShell Gallery
-        if: env.HAS_PSGALLERY_KEY == 'true'
+        if: env.HAS_PSGALLERY_KEY == 'true' && github.ref == 'refs/heads/main'
         shell: pwsh
         env:
           PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
@@ -157,7 +159,7 @@ jobs:
         run: Compress-Archive -Path ./module/* -DestinationPath "PSTui-${{ steps.version.outputs.version }}.zip"
 
       - name: Tag and create GitHub Release
-        if: env.HAS_PSGALLERY_KEY == 'true'
+        if: env.HAS_PSGALLERY_KEY == 'true' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
