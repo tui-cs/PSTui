@@ -60,6 +60,24 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'   # SDK version comes from global.json
 
+      # The module targets PS 7.6+ (net10.0); GitHub runners ship PS 7.4, whose
+      # Test-ModuleManifest / Publish-PSResource reject the manifest. Install
+      # PS 7.6 as a .NET tool and put it ahead of the bundled pwsh on PATH so
+      # every `shell: pwsh` step below (incl. Install PSResources) runs under it.
+      - name: Install PowerShell 7.6+
+        shell: bash
+        run: |
+          dotnet tool install --global --version "7.6.*" PowerShell
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Verify PowerShell version
+        shell: pwsh
+        run: |
+          "Using PowerShell $($PSVersionTable.PSVersion) at $((Get-Command pwsh).Source)"
+          if ($PSVersionTable.PSVersion -lt [version]'7.6') {
+            throw "Expected PowerShell 7.6+, got $($PSVersionTable.PSVersion)"
+          }
+
       - name: Resolve version
         id: version
         shell: pwsh
