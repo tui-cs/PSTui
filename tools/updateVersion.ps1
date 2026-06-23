@@ -16,14 +16,14 @@ if ($LASTEXITCODE -ne 0) {
 
 $v = "$($Version.Major).$($Version.Minor).$($Version.Patch)"
 
-$Path = "ConsoleGuiTools.Common.props"
+$Path = "PSTui.Common.props"
 $f = Get-Content -Path $Path
 $f = $f -replace '^(?<prefix>\s+<VersionPrefix>)(.+)(?<suffix></VersionPrefix>)$', "`${prefix}${v}`${suffix}"
 $f = $f -replace '^(?<prefix>\s+<VersionSuffix>)(.*)(?<suffix></VersionSuffix>)$', "`${prefix}$($Version.PreReleaseLabel)`${suffix}"
 $f | Set-Content -Path $Path
 git add $Path
 
-$Path = "src/Microsoft.PowerShell.ConsoleGuiTools/Microsoft.PowerShell.ConsoleGuiTools.psd1"
+$Path = "src/PSTui/PSTui.psd1"
 $f = Get-Content -Path $Path
 $f = $f -replace "^(?<prefix>ModuleVersion\s+=\s+')(.+)(?<suffix>')`$", "`${prefix}${v}`${suffix}"
 $f | Set-Content -Path $Path

@@ -27,7 +27,7 @@
         },
         {
             "label": "test",
-            "detail": "Run xunit tests via dotnet test (resolves GraphicalTools.slnx)",
+            "detail": "Run xunit tests via dotnet test (resolves PSTui.slnx)",
             "type": "process",
             "command": "dotnet",
             "args": [

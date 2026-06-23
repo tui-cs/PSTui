@@ -20,7 +20,7 @@
     ],
     "configurations": [
         {
-            "name": "ConsoleGuiTools",
+            "name": "PSTui",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
@@ -30,7 +30,7 @@
                 "-NoLogo",
                 "-NoExit",
                 "-Command",
-                "Import-Module ${workspaceFolder}/module/Microsoft.PowerShell.ConsoleGuiTools.psd1; ${input:sampleCommand}"
+                "Import-Module ${workspaceFolder}/module/PSTui.psd1; ${input:sampleCommand}"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",

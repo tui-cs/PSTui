@@ -33,22 +33,22 @@ _Note:_ A module named `Microsoft.PowerShell.GraphicalTools` used to be built an
 ## Installation
 
 ```powershell
-Install-Module Microsoft.PowerShell.ConsoleGuiTools
+Install-Module PSTui
 ```
 
 ## Features
 
-* [`Out-ConsoleGridView`](docs/Microsoft.PowerShell.ConsoleGuiTools/Out-ConsoleGridView.md) - Send objects to an interactive table view with column headers, horizontal scrolling, streaming, sorting, and native multi-selection.
-* [`Show-ObjectTree`](docs/Microsoft.PowerShell.ConsoleGuiTools/Show-ObjectTree.md) - Send objects to a tree view window for interactive filtering and sorting.
+* [`Out-ConsoleGridView`](docs/PSTui/Out-ConsoleGridView.md) - Send objects to an interactive table view with column headers, horizontal scrolling, streaming, sorting, and native multi-selection.
+* [`Show-ObjectTree`](docs/PSTui/Show-ObjectTree.md) - Send objects to a tree view window for interactive filtering and sorting.
 
-* Cross-platform - Works on any platform that supports PowerShell 7.2+.
+* Cross-platform - Works on any platform that supports PowerShell 7.6+.
 * Interactive - Use the mouse and keyboard to interact with the grid or tree view.
 * Filtering - Filter the data using the built-in filter box.
 * Sorting - Sort the data by clicking on the column headers.
 * Multiple Selection - Select multiple items and send them down the pipeline.
 * Customizable - Customize the grid view window with the built-in parameters.
 
-![Demo GIF](docs/Microsoft.PowerShell.ConsoleGuiTools/ocgv.gif)
+![Demo GIF](docs/PSTui/ocgv.gif)
 
 ## Examples
 
@@ -178,7 +178,7 @@ Install PowerShell 7.6+ with [these instructions](https://github.com/PowerShell/
 ### 2. Clone the GitHub repository
 
 ```powershell
-git clone https://github.com/PowerShell/ConsoleGuiTools.git
+git clone https://github.com/gui-cs/PSTui.git
 ```
 
 ### 3. Install [Invoke-Build](https://github.com/nightroman/Invoke-Build)
@@ -192,8 +192,8 @@ Now you're ready to build the code.  You can do so in one of two ways:
 ### 4. Building the code from PowerShell
 
 ```powershell
-pushd ./ConsoleGuiTools
-Invoke-Build Build -ModuleName Microsoft.PowerShell.ConsoleGuiTools
+pushd ./PSTui
+Invoke-Build Build
 popd
 ```
 
@@ -201,7 +201,7 @@ From there you can import the module that you just built for example (start a fr
 
 ```powershell
 pwsh
-Import-Module ./module/Microsoft.PowerShell.ConsoleGuiTools
+Import-Module ./module/PSTui
 ```
 
 And then run the cmdlet you want to test, for example:
@@ -217,7 +217,7 @@ exit
 ### 5. Debugging in Visual Studio Code
 
 ```powershell
-code ./ConsoleGuiTools
+code ./PSTui
 ```
 
 Build by hitting `Ctrl-Shift-B` in VS Code.
@@ -236,15 +236,15 @@ Your breakpoint should be hit.
 
 We would love to incorporate community contributions into this project.  If
 you would like to contribute code, documentation, tests, or bug reports,
-please read the [development section above](https://github.com/PowerShell/ConsoleGuiTools#development)
+please read the [development section above](https://github.com/gui-cs/PSTui#development)
 to learn more.
 
-## Microsoft.PowerShell.ConsoleGuiTools Architecture
+## PSTui Architecture
 
-`ConsoleGuiTools` consists of 2 .NET Projects:
+`PSTui` consists of 2 .NET Projects:
 
-* ConsoleGuiTools - Cmdlet implementation for Out-ConsoleGridView and Show-ObjectTree
-* OutGridView.Models - Contains data contracts between the GUI & Cmdlet
+* PSTui - Cmdlet implementation for Out-ConsoleGridView and Show-ObjectTree
+* PSTui.Models - Contains data contracts between the TUI & Cmdlet
 
 _Note:_ Previously, this repo included `Microsoft.PowerShell.GraphicalTools` which included the Avalonia-based `Out-GridView` (implemented in `.\Microsoft.PowerShell.GraphicalTools` and `.\OutGridView.Gui`). These components have been deprecated (see note above).
 

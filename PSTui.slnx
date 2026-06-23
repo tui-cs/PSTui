@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/PSTui/PSTui.csproj" />
+  <Project Path="src/PSTui.Models/PSTui.Models.csproj" />
+  <Project Path="test/PSTui.Tests/PSTui.Tests.csproj" />
+</Solution>

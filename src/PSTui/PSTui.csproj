@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\PSTui.Common.props" />
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>preview</LangVersion>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!-- To pull Terminal.Gui from a local nuget source:                        
+        - Build Terminal.Gui locally in ../../gui-cs/Terminal.Gui          
+        - Change Terminal.Gui Version= to "major.minor.patch-*"     
+        - Add ';https://api.nuget.org/v3/index.json' to the end of the RestoreSources property group below
+        - Uncomment the RestoreSources property group below
+        -->
+         <!--<RestoreSources>$(RestoreSources);../../../gui-cs/Terminal.Gui/Terminal.Gui/bin/Debug;https://api.nuget.org/v3/index.json;</RestoreSources>-->
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.PowerShell.SDK" />
+        <!-- Temporarily using ProjectReference to local Terminal.Gui source instead of NuGet package.
+             To revert, replace this ProjectReference with: <PackageReference Include="Terminal.Gui" /> -->
+        <!--<ProjectReference Include="..\..\..\gui-cs\Terminal.Gui\Terminal.Gui\Terminal.Gui.csproj" />-->
+
+        <PackageReference Include="Terminal.Gui" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../PSTui.Models/PSTui.Models.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="PSTui.psd1" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="PSTui.Tests" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <AnalysisMode>Recommended</AnalysisMode>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    </PropertyGroup>
+</Project>

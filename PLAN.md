@@ -99,20 +99,19 @@ PSTui should feel like a first-class member of this family.
 
 ## 5. Open items to confirm
 
-- **Target framework:** #267 targets **.NET 10**. A binary module loads
-  in-process, so its TFM must match the PowerShell host runtime (PS 7.4 = .NET 8;
-  .NET 10 needs PS 7.6+). Decide: keep `net10.0`, multi-target `net8.0;net10.0`,
-  or pin `net8.0` (LTS) for the widest install base.
+- **Target framework:** ✅ **Decided — `net10.0`** (PowerShell **7.6+**, set as
+  `PowerShellVersion` in the manifest). A binary module loads in-process, so the
+  TFM must match the host runtime.
 - **JSON stack:** confirm whether the v2 code still references `Newtonsoft.Json`;
   if so, migrate to `System.Text.Json` during workstream B.
 
 ## 6. Sequenced checklist
 
 1. [x] Land PR #267 (v2 foundation) on the rebrand branch.
-2. [ ] Confirm tests build & pass (.NET 10).
-3. [ ] De-Microsoft rebrand → module/namespaces/props/README (`PSTui`);
-       keep `ocgv` and `shot` names unchanged.
-4. [ ] gui-cs CI/release pipeline; resolve TFM + JSON-stack open items.
+2. [ ] Confirm tests build & pass (.NET 10). _(issue #1)_
+3. [x] De-Microsoft rebrand → module/namespaces/props/README (`PSTui`),
+       targeting `net10.0`/PS 7.6+; `ocgv` and `shot` names unchanged. _(issue #4)_
+4. [ ] gui-cs CI/release pipeline; resolve JSON-stack open item.
 5. [ ] Publish **PSTui 1.0.0** to PSGallery.
 6. [ ] Coordinate archive pointer with @andyleejordan; update gui-cs org README.
 7. [ ] (Post-1.0) clet/cli agent-discoverability alignment.

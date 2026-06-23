@@ -1,5 +1,5 @@
 # .Silent cls
-# Out-ConsoleGridView (ocgv) from Microsoft.PowerShell.ConsoleGuiTools Demo - Press enter to move to next step in demo
+# Out-ConsoleGridView (ocgv) from PSTui Demo - Press enter to move to next step in demo
 # Example 1: Output processes to a grid view
 Get-Process | Out-ConsoleGridView 
 # .Silent cls
