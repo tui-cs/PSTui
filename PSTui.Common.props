@@ -2,11 +2,11 @@
     <PropertyGroup>
         <VersionPrefix>1.0.0</VersionPrefix>
         <VersionSuffix></VersionSuffix>
-        <Company>gui-cs</Company>
-        <Copyright>© Tig Kindel and gui-cs contributors. Licensed under the MIT License.</Copyright>
+        <Company>tui-cs</Company>
+        <Copyright>© Tig Kindel and tui-cs contributors. Licensed under the MIT License.</Copyright>
         <LangVersion>latest</LangVersion>
-        <PackageLicenseUrl>https://github.com/gui-cs/PSTui/blob/main/LICENSE.txt</PackageLicenseUrl>
+        <PackageLicenseUrl>https://github.com/tui-cs/PSTui/blob/main/LICENSE.txt</PackageLicenseUrl>
         <RepositoryType>git</RepositoryType>
-        <RepositoryUrl>https://github.com/gui-cs/PSTui</RepositoryUrl>
+        <RepositoryUrl>https://github.com/tui-cs/PSTui</RepositoryUrl>
     </PropertyGroup>
 </Project>

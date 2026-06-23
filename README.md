@@ -2,7 +2,7 @@
 
 > ## 🚧 Work in progress
 >
-> **PSTui is the [gui-cs](https://github.com/gui-cs) community continuation of
+> **PSTui is the [tui-cs](https://github.com/tui-cs) community continuation of
 > Microsoft's `Microsoft.PowerShell.ConsoleGuiTools`.**
 >
 > In [ConsoleGuiTools#275](https://github.com/PowerShell/ConsoleGuiTools/issues/275)
@@ -26,7 +26,7 @@
 
 This repo contains the `Out-ConsoleGridView` and `Show-ObjectTree`
 PowerShell Cmdlets — interactive terminal UI (TUI) experiences for the
-pipeline, built on [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui).
+pipeline, built on [Terminal.Gui](https://github.com/tui-cs/Terminal.Gui).
 
 _Note:_ A module named `Microsoft.PowerShell.GraphicalTools` used to be built and published out of this repo, but per [#101](https://github.com/PowerShell/ConsoleGuiTools/issues/101) it is deprecated and unmaintained until such time that it can be rewritten on top of [.NET MAUI](https://devblogs.microsoft.com/dotnet/introducing-net-multi-platform-app-ui/).
 
@@ -46,7 +46,7 @@ so existing scripts keep working — you only change the module you install:
 # Old (Microsoft — archived, final release 0.7.7)
 Install-Module Microsoft.PowerShell.ConsoleGuiTools
 
-# New (gui-cs community continuation)
+# New (tui-cs community continuation)
 Install-Module PSTui
 ```
 
@@ -56,7 +56,7 @@ Install-Module PSTui
 | Aliases      | `ocgv`, `shot`                         | **same**                         |
 | Engine       | Terminal.Gui v1                        | Terminal.Gui v2                  |
 | PowerShell   | 7.2+                                   | 7.6+                             |
-| Maintainer   | Microsoft (archived)                   | [gui-cs](https://github.com/gui-cs) community |
+| Maintainer   | Microsoft (archived)                   | [tui-cs](https://github.com/tui-cs) community |
 
 Because both modules export the **same** cmdlet names, avoid installing both at
 once — `Import-Module` will report ambiguous commands. If you have the old
@@ -173,7 +173,7 @@ The example uses the `-Filter` paramter to filter for all proceses with a name t
 
 ### Example 7: Use F7 as "Show Command History"
 
-Add [gui-cs/F7History](https://github.com/gui-cs/F7History) to your Powershell profile.
+Add [tui-cs/F7History](https://github.com/tui-cs/F7History) to your Powershell profile.
 
 Press `F7` to see the history for the current PowerShell instance
 
@@ -218,7 +218,7 @@ Install PowerShell 7.6+ with [these instructions](https://github.com/PowerShell/
 ### 2. Clone the GitHub repository
 
 ```powershell
-git clone https://github.com/gui-cs/PSTui.git
+git clone https://github.com/tui-cs/PSTui.git
 ```
 
 ### 3. Install [Invoke-Build](https://github.com/nightroman/Invoke-Build)
@@ -276,7 +276,7 @@ Your breakpoint should be hit.
 
 We would love to incorporate community contributions into this project.  If
 you would like to contribute code, documentation, tests, or bug reports,
-please read the [development section above](https://github.com/gui-cs/PSTui#development)
+please read the [development section above](https://github.com/tui-cs/PSTui#development)
 to learn more.
 
 ## PSTui Architecture

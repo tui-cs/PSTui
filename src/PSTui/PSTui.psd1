@@ -1,5 +1,5 @@
 #
-# Copyright (c) Tig Kindel and gui-cs contributors.
+# Copyright (c) Tig Kindel and tui-cs contributors.
 # Licensed under the MIT license.
 #
 
@@ -18,13 +18,13 @@ CompatiblePSEditions = @( 'Core' )
 GUID = 'cb513e61-8105-4d72-9488-628ed758b3cc'
 
 # Author of this module
-Author = 'Tig Kindel and gui-cs contributors'
+Author = 'Tig Kindel and tui-cs contributors'
 
 # Company or vendor of this module
-CompanyName = 'gui-cs'
+CompanyName = 'tui-cs'
 
 # Copyright statement for this module
-Copyright = '© Tig Kindel and gui-cs contributors. Licensed under the MIT License.'
+Copyright = '© Tig Kindel and tui-cs contributors. Licensed under the MIT License.'
 
 # Description of the functionality provided by this module
 Description = 'PowerShell TUI tools: interactive terminal UI cmdlets (Out-ConsoleGridView and Show-ObjectTree) built on Terminal.Gui. The community continuation of Microsoft.PowerShell.ConsoleGuiTools.'
@@ -95,16 +95,16 @@ PrivateData = @{
         Tags = @('TUI', 'Terminal.Gui', 'PSTui', 'Console', 'Out-ConsoleGridView', 'Show-ObjectTree', 'MacOS', 'Windows', 'Linux', 'PSEdition_Core')
 
         # A URL to the license for this module.
-        LicenseUri = 'https://github.com/gui-cs/PSTui/blob/main/LICENSE.txt'
+        LicenseUri = 'https://github.com/tui-cs/PSTui/blob/main/LICENSE.txt'
 
         # A URL to the main website for this project.
-        ProjectUri = 'https://github.com/gui-cs/PSTui'
+        ProjectUri = 'https://github.com/tui-cs/PSTui'
 
         # A URL to an icon representing this module.
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Please see release notes at: https://github.com/gui-cs/PSTui/releases'
+        ReleaseNotes = 'Please see release notes at: https://github.com/tui-cs/PSTui/releases'
 
         # Prerelease string of this module
         # Prerelease = ''

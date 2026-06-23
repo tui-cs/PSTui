@@ -1,6 +1,6 @@
 # PSTui CI/CD
 
-PSTui's pipeline follows the [gui-cs/clet](https://github.com/gui-cs/clet)
+PSTui's pipeline follows the [tui-cs/clet](https://github.com/tui-cs/clet)
 model, adapted for a **PowerShell binary module published to the PowerShell
 Gallery** (rather than a NativeAOT CLI shipped to NuGet/Homebrew/WinGet).
 
@@ -50,7 +50,7 @@ To move between phases, change these and merge to `main`:
 ## Required configuration
 
 - **`PSGALLERY_API_KEY`** repo secret — the PowerShell Gallery API key (under the
-  gui-cs org). **Until it is set, `release.yml` runs as a dry run**: it builds,
+  tui-cs org). **Until it is set, `release.yml` runs as a dry run**: it builds,
   tests, and resolves the version but skips publishing, tagging, and the GitHub
   Release. This lets the pipeline be validated safely before going live.
 
