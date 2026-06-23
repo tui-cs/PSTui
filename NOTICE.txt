@@ -2,7 +2,7 @@ NOTICES AND INFORMATION
 Do Not Translate or Localize
 
 PSTui is the community continuation of Microsoft.PowerShell.ConsoleGuiTools,
-maintained by the gui-cs organization and licensed under the MIT License.
+maintained by the tui-cs organization and licensed under the MIT License.
 
 This software incorporates material from third parties. The third-party
 components and their license notices are listed below.

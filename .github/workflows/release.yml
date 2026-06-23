@@ -1,6 +1,6 @@
 name: Release
 
-# Release pipeline for PSTui, modeled on gui-cs/clet but adapted for a
+# Release pipeline for PSTui, modeled on tui-cs/clet but adapted for a
 # PowerShell *binary module* published to the PowerShell Gallery (not a
 # NativeAOT CLI). See .github/workflows/README.md for the branching and
 # versioning model.
