@@ -112,7 +112,7 @@ PSTui should feel like a first-class member of this family.
 2. [x] Confirm tests build & pass (.NET 10). _(issue #1)_
 3. [x] De-Microsoft rebrand → module/namespaces/props/README (`PSTui`),
        targeting `net10.0`/PS 7.6+; `ocgv` and `shot` names unchanged. _(issue #4)_
-4. [ ] tui-cs CI/release pipeline; JSON-stack done _(issue #3)_, pipeline _(issue #5)_.
-5. [ ] Publish **PSTui 1.0.0** to PSGallery.
+4. [x] tui-cs CI/release pipeline; JSON-stack done _(issue #3)_, pipeline _(issue #5)_.
+5. [x] Publish **PSTui 1.0.0** to PSGallery. _(issue #6 — live, `Install-Module PSTui`)_
 6. [ ] Coordinate archive pointer with @andyleejordan; update tui-cs org README.
 7. [ ] (Post-1.0) clet/cli agent-discoverability alignment.
