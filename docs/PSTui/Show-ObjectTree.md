@@ -1,5 +1,5 @@
 ---
-external help file: ConsoleGuiToolsModule.dll-Help.xml
+external help file: PSTui.dll-Help.xml
 keywords: powershell,cmdlet
 locale: en-us
 Module Name: PSTui
