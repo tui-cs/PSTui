@@ -68,10 +68,21 @@ jobs:
         shell: bash
         run: |
           # The repo nuget.config clears sources and lists only the
-          # authenticated PowerShell CFS feed, which doesn't carry the
-          # `PowerShell` tool (401). Pull it from nuget.org explicitly.
+          # authenticated PowerShell CFS feed, which 401s on the `PowerShell`
+          # tool. Use a throwaway config with only nuget.org so the CFS feed
+          # is never consulted for this install (--ignore-failed-sources isn't
+          # honored during tool version resolution).
+          cat > "$RUNNER_TEMP/nuget.org.config" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+            </packageSources>
+          </configuration>
+          EOF
           dotnet tool install --global --version "7.6.*" PowerShell \
-            --add-source "https://api.nuget.org/v3/index.json" --ignore-failed-sources
+            --configfile "$RUNNER_TEMP/nuget.org.config"
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Verify PowerShell version
