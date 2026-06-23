@@ -3,9 +3,7 @@
 
 using System;
 using System.Text;
-using Newtonsoft.Json;
-
-// TODO: switch to System.Text.Json
+using System.Text.Json.Serialization;
 
 namespace PSTui.Models;
 

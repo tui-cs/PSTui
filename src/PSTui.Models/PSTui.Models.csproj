@@ -9,7 +9,6 @@
     <InternalsVisibleTo Include="PSTui.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="System.Management.Automation" />
   </ItemGroup>
 </Project>
