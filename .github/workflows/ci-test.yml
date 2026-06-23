@@ -33,19 +33,17 @@ jobs:
         shell: pwsh
         run: ./tools/installPSResources.ps1
 
+      # Dev-loop CI builds and runs the xUnit suite. Packaging/publishing
+      # (Publish-PSResource) is a release activity that validates the manifest
+      # against the running PowerShell host — the module targets PS 7.6+, but
+      # the GitHub runners ship PS 7.4, so that step lives in release.yml (main).
       - name: Build and test
         shell: pwsh
-        run: Invoke-Build -Configuration Release Build, Test, Package
+        run: Invoke-Build -Configuration Release Build, Test
 
       - name: Upload module
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ConsoleGuiTools-module-${{ matrix.os }}
+          name: PSTui-module-${{ matrix.os }}
           path: module
-
-      - name: Upload NuGet package
-        uses: actions/upload-artifact@v4
-        with:
-          name: ConsoleGuiTools-nupkg-${{ matrix.os }}
-          path: out/*.nupkg
