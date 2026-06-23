@@ -35,6 +35,9 @@ task Build {
     
     # Copy the module manifest
     Copy-Item -Force -Path "./publish/PSTui.psd1" -Destination ../../module
+
+    # Copy the nested script module (F7/Shift+F7 command-history key handlers)
+    Copy-Item -Force -Path "./publish/PSTui.History.psm1" -Destination ../../module
     Pop-Location
 
     $Assets = $(

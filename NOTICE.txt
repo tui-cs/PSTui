@@ -4,6 +4,9 @@ Do Not Translate or Localize
 PSTui is the community continuation of Microsoft.PowerShell.ConsoleGuiTools,
 maintained by the tui-cs organization and licensed under the MIT License.
 
+The F7/Shift+F7 command-history key handlers (PSTui.History.psm1) are adapted
+from F7History (https://github.com/tui-cs/F7History), © Tig Kindel, MIT License.
+
 This software incorporates material from third parties. The third-party
 components and their license notices are listed below.
 

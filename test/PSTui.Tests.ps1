@@ -46,6 +46,31 @@ Describe 'PSTui Module' {
         }
     }
 
+    Context 'Command-history key handlers (folded-in F7History)' {
+        It 'Should export Enable-PSTuiHistoryKeyHandler' {
+            Get-Command -Name Enable-PSTuiHistoryKeyHandler -Module PSTui -ErrorAction SilentlyContinue |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should export Disable-PSTuiHistoryKeyHandler' {
+            Get-Command -Name Disable-PSTuiHistoryKeyHandler -Module PSTui -ErrorAction SilentlyContinue |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should bind F7 and Shift+F7 to PSTui by default when PSReadLine is available' -Skip:(-not (Get-Command Get-PSReadLineKeyHandler -ErrorAction SilentlyContinue)) {
+            $bound = Get-PSReadLineKeyHandler | Where-Object { $_.Function -like 'PSTui*' }
+            @($bound).Key | Should -Contain 'F7'
+            @($bound).Key | Should -Contain 'Shift+F7'
+        }
+
+        It 'Disable-PSTuiHistoryKeyHandler removes the bindings; Enable restores them' -Skip:(-not (Get-Command Get-PSReadLineKeyHandler -ErrorAction SilentlyContinue)) {
+            Disable-PSTuiHistoryKeyHandler
+            @(Get-PSReadLineKeyHandler | Where-Object { $_.Function -like 'PSTui*' }).Count | Should -Be 0
+            Enable-PSTuiHistoryKeyHandler
+            @(Get-PSReadLineKeyHandler | Where-Object { $_.Function -like 'PSTui*' }).Count | Should -Be 2
+        }
+    }
+
     Context 'Out-ConsoleGridView parameters' {
         It 'Should have InputObject parameter' {
             $cmd = Get-Command Out-ConsoleGridView

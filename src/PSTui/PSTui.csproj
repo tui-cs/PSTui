@@ -31,6 +31,7 @@
 
     <ItemGroup>
         <None Update="PSTui.psd1" CopyToOutputDirectory="PreserveNewest" />
+        <None Update="PSTui.History.psm1" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>

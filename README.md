@@ -171,17 +171,29 @@ This example shows defining a function named `killp` that shows a grid view of a
 
 The example uses the `-Filter` paramter to filter for all proceses with a name that includes `note` (thus highlighting `Notepad` if it were running. Selecting an item in the grid view and pressing `ENTER` will kill that process.
 
-### Example 7: Use F7 as "Show Command History"
+### Example 7: `F7` graphical command history (built in)
 
-Add [tui-cs/F7History](https://github.com/tui-cs/F7History) to your Powershell profile.
+PSTui binds `F7` and `Shift+F7` automatically when imported — no separate
+module needed (the [F7History](https://github.com/tui-cs/F7History) functionality
+is folded in).
 
-Press `F7` to see the history for the current PowerShell instance
+Press `F7` to see the history for the current PowerShell instance.
 
-Press `Shift-F7` to see the history for all PowerShell instances.
+Press `Shift+F7` to see the history for **all** PowerShell instances.
 
-Whatever you select within `Out-ConsoleGridView` will be inserted on your command line.
+Whatever you select within `Out-ConsoleGridView` is inserted on your command
+line. Whatever was typed before pressing `F7`/`Shift+F7` is used as the filter.
 
-Whatever was typed on the command line prior to hitting `F7` or `Shift-F7` will be used as a filter.
+**Opt out** if you'd rather keep your own `F7` binding:
+
+```powershell
+# Per-session, at runtime:
+Disable-PSTuiHistoryKeyHandler        # (Enable-PSTuiHistoryKeyHandler to re-bind)
+
+# Or permanently, before PSTui is imported (e.g. in your $PROFILE):
+$PSTuiDisableHistoryKeyHandler = $true
+# ...or set the environment variable PSTUI_DISABLE_HISTORY_KEYS=1
+```
 
 ### Example 8: Output processes to a tree view
 
