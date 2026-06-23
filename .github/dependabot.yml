@@ -1,10 +1,10 @@
 version: 2
 updates:
 - package-ecosystem: nuget
-  directory: "/src/Microsoft.PowerShell.ConsoleGuiTools/"
+  directory: "/src/PSTui/"
   schedule:
     interval: weekly
 - package-ecosystem: nuget
-  directory: "/src/Microsoft.PowerShell.OutGridView.Models/"
+  directory: "/src/PSTui.Models/"
   schedule:
     interval: weekly

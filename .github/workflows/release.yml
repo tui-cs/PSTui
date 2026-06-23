@@ -1,0 +1,185 @@
+name: Release
+
+# Release pipeline for PSTui, modeled on gui-cs/clet but adapted for a
+# PowerShell *binary module* published to the PowerShell Gallery (not a
+# NativeAOT CLI). See .github/workflows/README.md for the branching and
+# versioning model.
+#
+# Branching: `develop` (default, day-to-day) -> `main` (release-only).
+# A push to `main` ships a release; version is driven by PSTui.Common.props.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'PSTui.Common.props'
+      - 'PSTui.build.ps1'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: 'Exact version to publish (e.g. 1.0.1 or 1.1.0-rc4). Leave blank to auto-resolve from PSTui.Common.props.'
+        required: false
+        type: string
+  # Allow Terminal.Gui (or other upstream) to trigger a rebuild/republish when it ships.
+  repository_dispatch:
+    types: [ terminal-gui-published ]
+
+permissions:
+  contents: write   # create tags and GitHub releases
+  issues: write     # open a failure-notification issue
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+      # Mapped here so it can be used in step `if:` conditions. Real publish
+      # only happens when the PSGALLERY_API_KEY secret is configured; otherwise
+      # the job is a dry run (build + test + version resolve, no publish/tag).
+      HAS_PSGALLERY_KEY: ${{ secrets.PSGALLERY_API_KEY != '' }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need full tag history for version resolution
+
+      - name: Install dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          cache: true
+          cache-dependency-path: '**/*.csproj'   # SDK version comes from global.json
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          # Source of truth: PSTui.Common.props
+          #   <VersionPrefix> = base version (e.g. 1.0.0)
+          #   <VersionSuffix> = prerelease phase, empty for stable (e.g. rc, beta, alpha)
+          # PowerShell prerelease labels are alphanumeric only (no dots), so we
+          # emit e.g. "rc4" -> version 1.0.0-rc4, tag v1.0.0-rc4.
+          [xml]$props = Get-Content ./PSTui.Common.props
+          $pg     = $props.Project.PropertyGroup
+          $prefix = ([string]($pg.VersionPrefix | Select-Object -First 1)).Trim()
+          $suffix = ([string]($pg.VersionSuffix | Select-Object -First 1)).Trim()
+
+          $override = '${{ github.event.inputs.version_override }}'.Trim()
+          if ($override) {
+            $full = $override
+            if ($full -match '-') { $base, $pre = $full -split '-', 2 } else { $base = $full; $pre = '' }
+          }
+          elseif ($suffix) {
+            # Prerelease phase: increment the build number off existing tags.
+            $existing = git tag --list "v$prefix-$suffix*" |
+              ForEach-Object { if ($_ -match "^v$([regex]::Escape($prefix))-$([regex]::Escape($suffix))(\d+)$") { [int]$Matches[1] } }
+            $next = 1 + (($existing | Measure-Object -Maximum).Maximum)
+            $pre  = "$suffix$next"
+            $base = $prefix
+            $full = "$prefix-$pre"
+          }
+          else {
+            # Stable phase: bump patch if this exact version was already tagged.
+            $base = $prefix; $pre = ''
+            if (git tag --list "v$prefix") {
+              $p = $prefix -split '\.'
+              $p[2] = [string]([int]$p[2] + 1)
+              $base = $p -join '.'
+            }
+            $full = $base
+          }
+
+          $isPre = [bool]$pre
+          Write-Host "Resolved version: $full (base=$base, prerelease='$pre')"
+          "version=$full"            >> $env:GITHUB_OUTPUT
+          "baseversion=$base"        >> $env:GITHUB_OUTPUT
+          "prereleaselabel=$pre"     >> $env:GITHUB_OUTPUT
+          "prerelease=$($isPre.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Install PSResources
+        shell: pwsh
+        run: ./tools/installPSResources.ps1
+
+      - name: Build and test
+        shell: pwsh
+        run: Invoke-Build -Configuration Release Build, Test
+
+      - name: Stamp module version
+        shell: pwsh
+        run: |
+          $manifest = './module/PSTui.psd1'
+          $base = '${{ steps.version.outputs.baseversion }}'
+          $pre  = '${{ steps.version.outputs.prereleaselabel }}'
+          $c = Get-Content -Raw $manifest
+          $c = $c -replace "ModuleVersion = '[^']*'", "ModuleVersion = '$base'"
+          if ($pre) { $c = $c -replace "#\s*Prerelease = ''", "Prerelease = '$pre'" }
+          Set-Content -Path $manifest -Value $c
+          Test-ModuleManifest -Path $manifest | Format-List Name, Version, PrivateData
+
+      - name: Publish to PowerShell Gallery
+        if: env.HAS_PSGALLERY_KEY == 'true'
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: |
+          Publish-PSResource -Path ./module -Repository PSGallery -ApiKey $env:PSGALLERY_API_KEY -Verbose
+
+      - name: Package module artifact
+        shell: pwsh
+        run: Compress-Archive -Path ./module/* -DestinationPath "PSTui-${{ steps.version.outputs.version }}.zip"
+
+      - name: Tag and create GitHub Release
+        if: env.HAS_PSGALLERY_KEY == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
+          generate_release_notes: true
+          files: PSTui-${{ steps.version.outputs.version }}.zip
+
+      - name: Upload artifact (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSTui-${{ steps.version.outputs.version }}
+          path: module
+
+  notify-failure:
+    needs: release
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Release workflow failed';
+            const url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `The [Release workflow](${url}) failed on \`${context.sha.substring(0,7)}\`.`;
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'release-failure',
+            });
+            if (existing.data.length) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.data[0].number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['release-failure'],
+              });
+            }

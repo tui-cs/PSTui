@@ -36,6 +36,46 @@ _Note:_ A module named `Microsoft.PowerShell.GraphicalTools` used to be built an
 Install-Module PSTui
 ```
 
+## Migrating from `Microsoft.PowerShell.ConsoleGuiTools`
+
+PSTui is a drop-in continuation of Microsoft's (now archived)
+`Microsoft.PowerShell.ConsoleGuiTools`. The cmdlets and aliases are unchanged,
+so existing scripts keep working — you only change the module you install:
+
+```powershell
+# Old (Microsoft — archived, final release 0.7.7)
+Install-Module Microsoft.PowerShell.ConsoleGuiTools
+
+# New (gui-cs community continuation)
+Install-Module PSTui
+```
+
+|              | `Microsoft.PowerShell.ConsoleGuiTools` | `PSTui`                          |
+| ------------ | -------------------------------------- | -------------------------------- |
+| Cmdlets      | `Out-ConsoleGridView`, `Show-ObjectTree` | **same**                       |
+| Aliases      | `ocgv`, `shot`                         | **same**                         |
+| Engine       | Terminal.Gui v1                        | Terminal.Gui v2                  |
+| PowerShell   | 7.2+                                   | 7.6+                             |
+| Maintainer   | Microsoft (archived)                   | [gui-cs](https://github.com/gui-cs) community |
+
+Because both modules export the **same** cmdlet names, avoid installing both at
+once — `Import-Module` will report ambiguous commands. If you have the old
+module, remove it first:
+
+```powershell
+Uninstall-Module Microsoft.PowerShell.ConsoleGuiTools
+Install-Module PSTui
+```
+
+### Behavior changes (from the Terminal.Gui v2 rewrite, [ConsoleGuiTools#267](https://github.com/PowerShell/ConsoleGuiTools/pull/267))
+
+* `Out-ConsoleGridView` renders **inline** by default; use `-FullScreen` for the
+  old alternate-buffer behavior.
+* Objects **stream** into the table as they arrive from the pipeline.
+* Pressing <kbd>Enter</kbd> with no explicit selection returns the **focused** row.
+* New parameters: `-Driver`, `-FullScreen`, `-Search`, `-Focus`, `-AllProperties`.
+* Removed: `-UseNetDriver` (replaced by `-Driver`).
+
 ## Features
 
 * [`Out-ConsoleGridView`](docs/PSTui/Out-ConsoleGridView.md) - Send objects to an interactive table view with column headers, horizontal scrolling, streaming, sorting, and native multi-selection.
