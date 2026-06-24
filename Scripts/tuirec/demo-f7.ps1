@@ -1,7 +1,11 @@
-# F7 history demo for tuirec. The pwsh REPL itself does not render under a
-# recording PTY, so this reproduces exactly what pressing F7 shows: recent
-# command history in Out-ConsoleGridView (same shape Show-PSTuiHistory builds),
-# with the typed prefix used as the live filter.
+# F7 history demo for tuirec. The pwsh REPL does not render under a recording
+# PTY, so this reproduces what pressing F7 shows: recent command history in
+# Out-ConsoleGridView (the same shape Show-PSTuiHistory builds), with the typed
+# prefix used as the live filter.
+$prompt = 'PS ~/PStui> '
+
+Write-Host ''
+Write-Host ($prompt + 'Get  ') -NoNewline; Write-Host '<F7>'
 Import-Module PSTui -ErrorAction Stop
 
 $history = @(
@@ -16,6 +20,10 @@ $history = @(
     'Get-History | Format-Table -AutoSize'
 ) | ForEach-Object { [pscustomobject]@{ CommandLine = $_ } }
 
+Start-Sleep -Milliseconds 1200
 $history |
-    Out-ConsoleGridView -OutputMode Single -Title 'Command History  (F7)' -Focus Filter |
+    Out-ConsoleGridView -OutputMode Single -Title 'Command History  (F7)' -Focus Filter -FullScreen |
     Out-Null
+
+Write-Host $prompt
+Start-Sleep -Milliseconds 800

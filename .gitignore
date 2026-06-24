@@ -14,3 +14,5 @@ Properties/launchSettings.json
 nuget.local.config
 GraphicalTools.Dev.slnx
 artifacts/
+Thumbs.db
+*.Thumbs.db

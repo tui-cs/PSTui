@@ -106,6 +106,10 @@ Install-Module PSTui
 
 ## Examples
 
+Run [`demo.ps1`](demo.ps1) for a guided walkthrough of the examples below:
+
+![demo.ps1 walkthrough](docs/PSTui/demo.gif)
+
 ### Example 1: Output processes to a grid view
 
 ```PowerShell
