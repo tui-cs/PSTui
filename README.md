@@ -15,6 +15,7 @@ PSTui adds interactive terminal-UI cmdlets to the PowerShell pipeline:
 
 ```powershell
 Install-Module PSTui
+Import-Module PSTui
 ```
 
 PSTui is the community continuation of Microsoft's now-archived
