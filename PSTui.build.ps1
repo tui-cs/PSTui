@@ -88,8 +88,16 @@ task Test {
     Invoke-BuildExec { & dotnet test PSTui.slnx --configuration $Configuration }
 
     # PowerShell-level tests (module load, aliases, F7/Shift+F7 key handlers)
-    # that the C# xUnit suite cannot cover. Imports the built ./module, so this
-    # must run after Build.
+    # that the C# xUnit suite cannot cover. These Import-Module the built
+    # ./module, whose manifest requires PowerShell 7.6+, so they can only run on
+    # a 7.6+ host. CI installs PS 7.6; on an older local host, skip them with a
+    # clear message rather than failing on a cryptic manifest-version error.
+    $minPwsh = [version]'7.6'
+    if ($PSVersionTable.PSVersion -lt $minPwsh) {
+        Write-Warning "Skipping Pester tests: they import the PSTui module, which requires PowerShell $minPwsh+ (current: $($PSVersionTable.PSVersion)). The .NET (xUnit) tests above still ran."
+        return
+    }
+
     Import-Module Pester -MinimumVersion 5.0 -Force
     $pester = New-PesterConfiguration
     $pester.Run.Path = './test/PSTui.Tests.ps1'
