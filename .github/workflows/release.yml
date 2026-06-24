@@ -122,10 +122,12 @@ jobs:
             $full = "$prefix-$pre"
           }
           else {
-            # Stable phase: bump patch if this exact version was already tagged.
+            # Stable phase: start at the prefix and bump the patch until we find
+            # a version that isn't already tagged (so successive releases off the
+            # same VersionPrefix don't collide with an already-published patch).
             $base = $prefix; $pre = ''
-            if (git tag --list "v$prefix") {
-              $p = $prefix -split '\.'
+            while (git tag --list "v$base") {
+              $p = $base -split '\.'
               $p[2] = [string]([int]$p[2] + 1)
               $base = $p -join '.'
             }
