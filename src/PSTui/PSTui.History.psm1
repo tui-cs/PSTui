@@ -68,17 +68,18 @@ function Show-PSTuiHistory {
 
     $selection = $history | Out-ConsoleGridView -OutputMode Single -Title $title -Filter $line
 
-    # Replace the current line with the selection (if any).
+    # Re-anchor PSReadLine's prompt at the *current* cursor row before touching
+    # the buffer. Under Terminal.Gui v2, Out-ConsoleGridView renders inline by
+    # default, so the screen has scrolled and PSReadLine's saved prompt row
+    # (_initialY) is now stale; a plain DeleteLine/Render would repaint the
+    # prompt in the wrong place (the F7History bug fixed in tui-cs/F7History#25).
+    # Passing CursorTop as the arg makes InvokePrompt re-anchor on this row.
+    [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt($null, [Console]::CursorTop)
+
+    # Replace the typed prefix (used above as the filter) with the selection.
     [Microsoft.PowerShell.PSConsoleReadLine]::DeleteLine()
     if ($selection) {
-        $command = $selection.CommandLine
-        [Microsoft.PowerShell.PSConsoleReadLine]::Insert($command)
-        if ($command.StartsWith($line)) {
-            [Microsoft.PowerShell.PSConsoleReadLine]::SetCursorPosition($cursor)
-        }
-        else {
-            [Microsoft.PowerShell.PSConsoleReadLine]::SetCursorPosition($command.Length)
-        }
+        [Microsoft.PowerShell.PSConsoleReadLine]::Insert($selection.CommandLine)
     }
 }
 
