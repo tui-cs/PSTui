@@ -10,11 +10,11 @@ Get-Process | Select-Object -Property Name, WorkingSet, PeakWorkingSet | Sort-Ob
 function killp { Get-Process | Out-ConsoleGridView -OutputMode Single -Filter $args[0] | Stop-Process -Id {$_.Id} }
 killp 
 # .Silent cls
-# Example 3b: 'killp note' fitlers for "note" (e.g. notepad.exe)
+# Example 3b: 'killp note' filters for "note" (e.g. notepad.exe)
 killp note
 # .Silent cls
 # Example 4: Navigate PowerShell command history (built in: just press F7 / Shift+F7)
-Get-History | Sort-Object -Descending -Property Id -Unique | Select-Object CommandLine -ExpandProperty CommandLine | Out-ConsoleGridView -OutputMode Single -Filter $line -Title "Command Line History"
+Get-History | Sort-Object -Descending -Property Id -Unique | Select-Object CommandLine -ExpandProperty CommandLine | Out-ConsoleGridView -OutputMode Single -Title "Command Line History"
 # .Silent cls
-#  Example 4: Use Show-ObjectTree to output processes to a tree view
+# Example 5: Use Show-ObjectTree to output processes to a tree view
 Get-Process | Show-ObjectTree

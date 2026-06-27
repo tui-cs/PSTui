@@ -123,17 +123,20 @@ The processes that you select are passed to the **Export-Csv** command and writt
 
 By default, `-OutputMode` is `Multiple`, which lets you send multiple items down the pipeline.
 
-### Example 8: Use F7 as "Show Command History"
+### Example 8: Browse command history with F7 / Shift+F7
 
-Save See [this gist](https://gist.github.com/tig/cbbeab7f53efd73e329afd6d4b838191) as `F7History.ps1` and run `F7History.ps1` in your `$profile`.
+PSTui binds `F7` and `Shift+F7` to a graphical command-history picker
+automatically when the module is imported (the [F7History](https://github.com/tui-cs/F7History)
+module, folded in). No setup beyond `Import-Module PSTui` is required — add that
+line to your `$PROFILE` to get the bindings in every session.
 
-Press `F7` to see the history for the current PowerShell instance
+Press `F7` to see the history for the current PowerShell session, or `Shift+F7`
+for history across all sessions (PSReadLine). Whatever you'd already typed at the
+prompt is used as the initial filter, and the entry you select is inserted at the
+prompt.
 
-Press `Shift-F7` to see the history for all PowerShell instances.
-
-Whatever you select within `Out-ConsoleGridView` will be inserted on your command line.
-
-Whatever was typed on the command line prior to hitting `F7` or `Shift-F7` will be used as a filter.
+The picker is also exposed as the `Show-PSTuiHistory` command (add `-Global` for
+all-sessions history), so you can call it directly or bind it to a different key.
 
 ### Example 9: Search for a row without filtering
 

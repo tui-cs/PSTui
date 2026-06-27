@@ -14,8 +14,9 @@ Gallery** (rather than a NativeAOT CLI shipped to NuGet/Homebrew/WinGet).
 ## Workflows
 
 ### `ci-test.yml` — Continuous Integration
-Builds and tests on every push / PR to `main` (and merge queue) across
-Windows, macOS, and Linux via `Invoke-Build Build, Test, Package`.
+Builds and tests on every push / PR to `develop` and `main` (and merge queue)
+across Windows, macOS, and Linux via `Invoke-Build Build, Test`. Packaging and
+publishing are release-only activities and live in `release.yml`.
 
 ### `release.yml` — Build, Test, Version, Publish
 Triggered by:
@@ -56,7 +57,6 @@ To move between phases, change these and merge to `main`:
 
 ## Status
 
-This pipeline is **new and not yet exercised end-to-end** (see issue #5). Before
-the first real release: add the `PSGALLERY_API_KEY` secret, reserve the `PSTui`
-package id on the Gallery (issue #6), and confirm a `workflow_dispatch` dry run
-is green.
+The pipeline is **live and exercised end-to-end** (issues #5 and #6 closed). The
+`PSGALLERY_API_KEY` secret is configured and PSTui is published to the PowerShell
+Gallery — merging `develop` → `main` ships the next version automatically.

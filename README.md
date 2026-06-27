@@ -85,13 +85,13 @@ Install-Module PSTui
   old alternate-buffer behavior.
 * Objects **stream** into the table as they arrive from the pipeline.
 * Pressing <kbd>Enter</kbd> with no explicit selection returns the **focused** row.
-* New parameters: `-Driver`, `-FullScreen`, `-Search`, `-Focus`, `-AllProperties`.
+* New parameters: `-Driver`, `-FullScreen`, `-Search`, `-Focus`.
 * Removed: `-UseNetDriver` (replaced by `-Driver`).
 
 ## Features
 
 * [`Out-ConsoleGridView`](docs/PSTui/Out-ConsoleGridView.md) - Send objects to an interactive table view with column headers, horizontal scrolling, streaming, sorting, and native multi-selection.
-* [`Show-ObjectTree`](docs/PSTui/Show-ObjectTree.md) - Send objects to a tree view window for interactive filtering and sorting.
+* [`Show-ObjectTree`](docs/PSTui/Show-ObjectTree.md) - Send objects to a tree view window for interactive exploration and filtering.
 * [Graphical command history](#command-history-f7--shiftf7) - `F7`/`Shift+F7` browse and re-run command history (the [F7History](https://github.com/tui-cs/F7History) module, built in).
 
 * Cross-platform - Works on any platform that supports PowerShell 7.6+.
@@ -188,7 +188,7 @@ killp note
 
 This example shows defining a function named `killp` that shows a grid view of all running processes and allows the user to select one to kill it.
 
-The example uses the `-Filter` paramter to filter for all proceses with a name that includes `note` (thus highlighting `Notepad` if it were running. Selecting an item in the grid view and pressing `ENTER` will kill that process.
+The example uses the `-Filter` parameter to filter for all processes with a name that includes `note` (thus highlighting `Notepad` if it were running). Selecting an item in the grid view and pressing `ENTER` will kill that process.
 
 ### Example 7: Output processes to a tree view
 

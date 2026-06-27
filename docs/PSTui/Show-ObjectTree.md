@@ -3,7 +3,7 @@ external help file: PSTui.dll-Help.xml
 keywords: powershell,cmdlet
 locale: en-us
 Module Name: PSTui
-ms.date: 07/20/2023
+ms.date: 06/27/2026
 schema: 2.0.0
 title: Show-ObjectTree
 ---
@@ -17,7 +17,7 @@ Sends output to an interactive tree in the same console window.
 ## SYNTAX
 
 ```PowerShell
-Show-ObjectTree [-InputObject <PSObject>] [-Title <string>] [-Filter <string>] [-MinUi] [-Driver <string>] [-FullScreen] [<CommonParameters>]
+Show-ObjectTree [-InputObject <PSObject>] [-Title <string>] [-Filter <string>] [-MinUI] [-Driver <string>] [-FullScreen] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -26,7 +26,7 @@ The **Show-ObjectTree** cmdlet sends the output from a command to a tree view wi
 
 Use the Filter box at the top of the window to search the text in the tree including literals or multiple words. Use the `-Filter` parameter to pre-populate the Filter box. The filter uses regular expressions.
 
-For instructions for using these features, type `Get-Help Show-ObjectTree -Full` and see How to Use the Tree View Window Features in the Notes section.
+Navigate the tree with the arrow keys: <kbd>Right</kbd> expands a node (rows marked with `+`), <kbd>Left</kbd> collapses it. Press <kbd>Esc</kbd> to close the window.
 
 ## EXAMPLES
 
@@ -108,7 +108,7 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -MinUi
+### -MinUI
 If specified no title or status bar will be displayed in the **Show-ObjectTree** window. The filter will only be displayed if `-Filter` is specified.
 
 ```yaml
@@ -176,8 +176,4 @@ You can send any object to this cmdlet.
 
 ## RELATED LINKS
 
-[Out-File](Out-File.md)
-
-[Out-Printer](Out-Printer.md)
-
-[Out-String](Out-String.md)
+[Out-ConsoleGridView](Out-ConsoleGridView.md)

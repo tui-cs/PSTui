@@ -1,41 +1,40 @@
-<!-- BEGIN MICROSOFT SECURITY.MD V0.0.9 BLOCK -->
+# Security Policy
 
-## Security
+The tui-cs community takes the security of PSTui seriously. Thank you for helping
+keep PSTui and its users safe.
 
-Microsoft takes the security of our software products and services seriously, which includes all source code repositories managed through our GitHub organizations, which include [Microsoft](https://github.com/Microsoft), [Azure](https://github.com/Azure), [DotNet](https://github.com/dotnet), [AspNet](https://github.com/aspnet), [Xamarin](https://github.com/xamarin) and [PowerShell](https://github.com/PowerShell).
+## Supported versions
 
-If you believe you have found a security vulnerability in any Microsoft-owned repository that meets [Microsoft's definition of a security vulnerability](https://aka.ms/security.md/definition), please report it to us as described below.
+Security fixes are made against the latest published release of PSTui on the
+[PowerShell Gallery](https://www.powershellgallery.com/packages/PSTui). Please
+make sure you can reproduce an issue on the latest version before reporting it.
 
-## Reporting Security Issues
+## Reporting a vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+**Please do not report security vulnerabilities through public GitHub issues,
+discussions, or pull requests.**
 
-Instead, please report them to the Microsoft Security Response Center (MSRC) at [https://msrc.microsoft.com/create-report](https://aka.ms/security.md/msrc/create-report).
+Instead, report them privately using GitHub's
+[private vulnerability reporting](https://github.com/tui-cs/PSTui/security/advisories/new)
+(the **Security → Report a vulnerability** button on the repository). If you are
+unable to use that, email the maintainer at **tig@kindel.com** with `PSTui
+security` in the subject line.
 
-If you prefer to submit without logging in, send email to [secure@microsoft.com](mailto:secure@microsoft.com).  If possible, encrypt your message with our PGP key; please download it from the [Microsoft Security Response Center PGP Key page](https://aka.ms/security.md/msrc/pgp).
+Please include as much of the following as you can, to help us triage quickly:
 
-You should receive a response within 24 hours. If for some reason you do not, please follow up via email to ensure we received your original message. Additional information can be found at [microsoft.com/msrc](https://www.microsoft.com/msrc). 
+- The type of issue and its impact (what an attacker could do).
+- The affected version(s), and the file(s) / location in the source.
+- Step-by-step instructions to reproduce, plus any required configuration.
+- Proof-of-concept or exploit code, if you have it.
 
-Please include the requested information listed below (as much as you can provide) to help us better understand the nature and scope of the possible issue:
+## What to expect
 
-  * Type of issue (e.g. buffer overflow, SQL injection, cross-site scripting, etc.)
-  * Full paths of source file(s) related to the manifestation of the issue
-  * The location of the affected source code (tag/branch/commit or direct URL)
-  * Any special configuration required to reproduce the issue
-  * Step-by-step instructions to reproduce the issue
-  * Proof-of-concept or exploit code (if possible)
-  * Impact of the issue, including how an attacker might exploit the issue
+- We aim to acknowledge new reports within a few days.
+- We will keep you informed as we investigate and work on a fix.
+- Once a fix is released, we are happy to credit you in the release notes unless
+  you prefer to remain anonymous.
 
-This information will help us triage your report more quickly.
-
-If you are reporting for a bug bounty, more complete reports can contribute to a higher bounty award. Please visit our [Microsoft Bug Bounty Program](https://aka.ms/security.md/msrc/bounty) page for more details about our active programs.
-
-## Preferred Languages
-
-We prefer all communications to be in English.
-
-## Policy
-
-Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https://aka.ms/security.md/cvd).
-
-<!-- END MICROSOFT SECURITY.MD BLOCK -->
+We follow the principle of
+[Coordinated Vulnerability Disclosure](https://en.wikipedia.org/wiki/Coordinated_vulnerability_disclosure):
+please give us a reasonable opportunity to release a fix before any public
+disclosure.
