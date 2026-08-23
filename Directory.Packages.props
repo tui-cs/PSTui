@@ -6,7 +6,7 @@
          (ConfigurationManager removal), vendored in ./local_packages via the
          "tgui-pr-5416" source in nuget.config. Swap back to a plain nuget.org
          version once 2.5.x ships. -->
-    <PackageVersion Include="Terminal.Gui" Version="2.5.0-tig-remove-cm-followup.1" />
+    <PackageVersion Include="Terminal.Gui" Version="2.5.0-tig-remove-cm-followup.2" />
     <!-- Test dependencies -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />

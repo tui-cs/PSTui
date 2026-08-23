@@ -37,8 +37,10 @@ internal sealed class ShowObjectView : IDisposable
         // Library defaults, ~/.tui, ./.tui, and TUI_CONFIG are applied at assembly
         // load via TuiConfigurationBuilder.Shared. Re-apply with the cmdlet name so
         // ./.tui/Show-ObjectTree.config.json is discovered even though the entry
-        // assembly is pwsh, not this module.
-        new Terminal.Gui.Configuration.TuiConfigurationBuilder("Show-ObjectTree").ApplyToStaticFacades();
+        // assembly is pwsh, not this module, and with the session's current filesystem
+        // location, because pwsh does not sync the process working directory with cd.
+        new Terminal.Gui.Configuration.TuiConfigurationBuilder("Show-ObjectTree", applicationData.CurrentDirectory)
+            .ApplyToStaticFacades();
 
         ShowObjectTreeWindow window = new(applicationData);
         IApplication app = Application.Create();
