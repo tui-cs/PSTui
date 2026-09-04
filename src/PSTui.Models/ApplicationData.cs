@@ -70,4 +70,12 @@ public class ApplicationData
     ///     Gets or sets a search pattern that positions the cursor on the first matching row.
     /// </summary>
     public string? Search { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the directory that Terminal.Gui ./.tui/ configuration files are resolved
+    ///     against. The cmdlets set this to the PowerShell session's current filesystem location,
+    ///     because PowerShell does not keep the process working directory in sync with Set-Location.
+    ///     When null, Terminal.Gui falls back to the process working directory.
+    /// </summary>
+    public string? CurrentDirectory { get; set; }
 }

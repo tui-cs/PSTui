@@ -169,7 +169,10 @@ public class OutConsoleGridViewCmdletCommand : PSCmdlet, IDisposable
                 Driver = Driver,
                 Verbose = Verbose,
                 Debug = Debug,
-                ModuleVersion = MyInvocation.MyCommand.Version.ToString()
+                ModuleVersion = MyInvocation.MyCommand.Version.ToString(),
+                // The session's cd location; pwsh does not sync the process working
+                // directory, so ./.tui/ config discovery must use this instead.
+                CurrentDirectory = SessionState.Path.CurrentFileSystemLocation.ProviderPath
             };
             _outConsoleGridView.Initialize(applicationData);
         }

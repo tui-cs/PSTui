@@ -103,8 +103,14 @@ internal sealed class OutConsoleGridView : IDisposable
     {
         _uiThread = new Thread(() =>
         {
-            ConfigurationManager.AppName = "Out-ConsoleGridView";
-            ConfigurationManager.Enable(ConfigLocations.All);
+            // Terminal.Gui 2.5 dropped ConfigurationManager (tui-cs/Terminal.Gui#5416).
+            // Library defaults, ~/.tui, ./.tui, and TUI_CONFIG are applied at assembly
+            // load via TuiConfigurationBuilder.Shared. Re-apply with the cmdlet name so
+            // ./.tui/Out-ConsoleGridView.config.json is discovered even though the entry
+            // assembly is pwsh, not this module, and with the session's current filesystem
+            // location, because pwsh does not sync the process working directory with cd.
+            new TuiConfigurationBuilder("Out-ConsoleGridView", _applicationData!.CurrentDirectory)
+                .ApplyToStaticFacades();
 
             _window = new OutGridViewWindow(_applicationData!, _dataSource!)
             {

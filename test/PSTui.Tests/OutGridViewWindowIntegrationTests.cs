@@ -60,8 +60,9 @@ public class OutGridViewWindowIntegrationTests
         ApplicationData appData,
         Action<IApplication, OutGridViewWindow> testAction)
     {
-        Terminal.Gui.Configuration.ConfigurationManager.Enable(
-            Terminal.Gui.Configuration.ConfigLocations.All);
+        // Terminal.Gui 2.5 dropped ConfigurationManager (tui-cs/Terminal.Gui#5416);
+        // configuration (library defaults, ~/.tui, ./.tui, TUI_CONFIG) is applied
+        // automatically at assembly load via TuiConfigurationBuilder.Shared.
 
         // Build data source from PSObjects in appData
         var typeGetter = new TypeGetter();

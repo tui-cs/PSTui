@@ -156,7 +156,10 @@ public class ShowObjectTreeCmdletCommand : PSCmdlet, IDisposable
             Driver = Driver,
             FullScreen = FullScreen,
             Debug = Debug,
-            ModuleVersion = MyInvocation.MyCommand.Version.ToString()
+            ModuleVersion = MyInvocation.MyCommand.Version.ToString(),
+            // The session's cd location; pwsh does not sync the process working
+            // directory, so ./.tui/ config discovery must use this instead.
+            CurrentDirectory = SessionState.Path.CurrentFileSystemLocation.ProviderPath
         };
 
         ShowObjectView.Run(applicationData);

@@ -33,7 +33,14 @@ internal sealed class ShowObjectView : IDisposable
     /// </remarks>
     internal static void Run(ApplicationData applicationData)
     {
-        Terminal.Gui.Configuration.ConfigurationManager.Enable(Terminal.Gui.Configuration.ConfigLocations.All);
+        // Terminal.Gui 2.5 dropped ConfigurationManager (tui-cs/Terminal.Gui#5416).
+        // Library defaults, ~/.tui, ./.tui, and TUI_CONFIG are applied at assembly
+        // load via TuiConfigurationBuilder.Shared. Re-apply with the cmdlet name so
+        // ./.tui/Show-ObjectTree.config.json is discovered even though the entry
+        // assembly is pwsh, not this module, and with the session's current filesystem
+        // location, because pwsh does not sync the process working directory with cd.
+        new Terminal.Gui.Configuration.TuiConfigurationBuilder("Show-ObjectTree", applicationData.CurrentDirectory)
+            .ApplyToStaticFacades();
 
         ShowObjectTreeWindow window = new(applicationData);
         IApplication app = Application.Create();
